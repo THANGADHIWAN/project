@@ -30,7 +30,7 @@ const navigationItems = [
 
 export function TopNavigation({ currentSection, onSectionChange }: TopNavigationProps) {
   return (
-    <div className="bg-white border-b border-gray-200 px-6">
+    <div className="bg-white border-b border-gray-100 px-6">
       <nav className="flex space-x-8">
         {navigationItems.map((item) => {
           const Icon = item.icon;
@@ -42,8 +42,8 @@ export function TopNavigation({ currentSection, onSectionChange }: TopNavigation
               onClick={() => onSectionChange(item.id)}
               className={`flex items-center space-x-2 px-3 py-4 text-sm font-medium border-b-2 transition-colors ${
                 isActive
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-gray-900 text-gray-900'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-200'
               }`}
             >
               <Icon className="h-4 w-4" />

@@ -149,7 +149,7 @@ function App() {
   
   return (
     <InvestigationProvider>
-      <div className="flex h-screen bg-gray-50">
+      <div className="flex h-screen bg-white">
         <LeftSidebar 
           activeModule={activeModule}
           onModuleChange={setActiveModule}
@@ -171,7 +171,7 @@ function App() {
             }}
           />
           
-          <main className="flex-1 overflow-auto bg-gray-50">
+          <main className="flex-1 overflow-auto bg-white">
             {currentSection === 'decision-tree' ? (
               renderContent()
             ) : (
