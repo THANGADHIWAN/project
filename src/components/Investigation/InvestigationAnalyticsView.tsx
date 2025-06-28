@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Download, BarChart3, PieChart, TrendingUp, Activity, X, RefreshCw, Calendar, Filter } from 'lucide-react';
+import { Plus, Download, BarChart3, PieChart, TrendingUp, Activity, X, RefreshCw, Calendar, Filter, LineChart, Zap, Target, Users, Clock, AlertTriangle } from 'lucide-react';
 import { Investigation } from '../../types/investigation';
 
 interface InvestigationAnalyticsViewProps {
@@ -23,29 +23,34 @@ interface DateRange {
 }
 
 const availableCharts = [
-  { id: 'status-distribution', title: 'Investigation Status Distribution', type: 'pie', icon: PieChart, category: 'Status' },
-  { id: 'priority-breakdown', title: 'Priority Breakdown', type: 'donut', icon: PieChart, category: 'Priority' },
-  { id: 'completion-trend', title: 'Completion Trend Over Time', type: 'line', icon: TrendingUp, category: 'Trends' },
-  { id: 'workload-distribution', title: 'Investigator Workload', type: 'bar', icon: BarChart3, category: 'Resources' },
-  { id: 'age-distribution', title: 'Investigation Age Distribution', type: 'histogram', icon: BarChart3, category: 'Time' },
-  { id: 'monthly-volume', title: 'Monthly Investigation Volume', type: 'area', icon: Activity, category: 'Volume' },
-  { id: 'time-to-closure', title: 'Average Time to Closure', type: 'gauge', icon: Activity, category: 'Performance' },
-  { id: 'overdue-analysis', title: 'Overdue Analysis', type: 'scatter', icon: TrendingUp, category: 'Risk' },
-  { id: 'capa-effectiveness', title: 'CAPA Effectiveness Rate', type: 'progress', icon: BarChart3, category: 'Quality' },
-  { id: 'investigation-funnel', title: 'Investigation Outcomes Funnel', type: 'funnel', icon: TrendingUp, category: 'Process' }
+  { id: 'investigations-over-time', title: 'Investigations Over Time', type: 'line', icon: TrendingUp, category: 'Trends' },
+  { id: 'status-distribution', title: 'Status Distribution', type: 'pie', icon: PieChart, category: 'Status' },
+  { id: 'priority-breakdown', title: 'Priority Breakdown', type: 'donut', icon: Target, category: 'Priority' },
+  { id: 'investigator-workload', title: 'Investigator Workload', type: 'bar', icon: Users, category: 'Resources' },
+  { id: 'time-to-closure', title: 'Time to Closure Trends', type: 'area', icon: Clock, category: 'Performance' },
+  { id: 'department-analysis', title: 'Department Analysis', type: 'horizontal-bar', icon: BarChart3, category: 'Department' },
+  { id: 'root-cause-frequency', title: 'Root Cause Frequency', type: 'bubble', icon: AlertTriangle, category: 'Quality' },
+  { id: 'investigation-age', title: 'Investigation Age Distribution', type: 'histogram', icon: Activity, category: 'Time' },
+  { id: 'repeat-incidents', title: 'Repeat Incidents Heatmap', type: 'heatmap', icon: Zap, category: 'Risk' },
+  { id: 'capa-effectiveness', title: 'CAPA Effectiveness Rate', type: 'gauge', icon: Target, category: 'Quality' },
+  { id: 'monthly-volume', title: 'Monthly Investigation Volume', type: 'column', icon: BarChart3, category: 'Volume' },
+  { id: 'outcome-funnel', title: 'Investigation Outcomes Funnel', type: 'funnel', icon: TrendingUp, category: 'Process' },
+  { id: 'deviation-correlation', title: 'Deviation Type Correlation', type: 'scatter', icon: Activity, category: 'Analysis' },
+  { id: 'shift-analysis', title: 'Incident Count by Shift', type: 'radar', icon: Clock, category: 'Operations' },
+  { id: 'delay-trends', title: 'Weekly Delay Trends', type: 'step-line', icon: TrendingUp, category: 'Performance' }
 ];
 
 export function InvestigationAnalyticsView({ investigations }: InvestigationAnalyticsViewProps) {
   const [activeCharts, setActiveCharts] = useState<string[]>([
-    'status-distribution',
-    'priority-breakdown', 
-    'completion-trend',
-    'workload-distribution',
-    'monthly-volume'
+    'investigations-over-time',
+    'status-distribution', 
+    'priority-breakdown',
+    'investigator-workload',
+    'time-to-closure'
   ]);
   const [showChartSelector, setShowChartSelector] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>({
     start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0],
@@ -89,10 +94,17 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
       ? Math.round(filteredInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / filteredInvestigations.length)
       : 0;
 
-    // Monthly volume data
-    const monthlyData = filteredInvestigations.reduce((acc, inv) => {
-      const month = new Date(inv.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      acc[month] = (acc[month] || 0) + 1;
+    // Time series data for trends
+    const timeSeriesData = filteredInvestigations.reduce((acc, inv) => {
+      const date = new Date(inv.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Department analysis (simulated)
+    const departments = ['QC Lab', 'QA Department', 'Production', 'R&D', 'Regulatory'];
+    const departmentData = departments.reduce((acc, dept) => {
+      acc[dept] = Math.floor(Math.random() * 15) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -103,12 +115,19 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
       overdue,
       avgProgress,
       total: filteredInvestigations.length,
-      monthlyData
+      timeSeriesData,
+      departmentData
     };
   }, [filteredInvestigations]);
 
   const generateChartData = (chartId: string): ChartData => {
     switch (chartId) {
+      case 'investigations-over-time':
+        return {
+          labels: Object.keys(analyticsData.timeSeriesData),
+          data: Object.values(analyticsData.timeSeriesData),
+          color: '#3B82F6'
+        };
       case 'status-distribution':
         return {
           labels: Object.keys(analyticsData.statusCounts),
@@ -121,25 +140,23 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
           data: Object.values(analyticsData.priorityCounts),
           colors: ['#EF4444', '#F59E0B', '#3B82F6', '#10B981']
         };
-      case 'workload-distribution':
+      case 'investigator-workload':
         return {
           labels: Object.keys(analyticsData.assigneeCounts),
           data: Object.values(analyticsData.assigneeCounts),
-          color: '#3B82F6'
-        };
-      case 'monthly-volume':
-        return {
-          labels: Object.keys(analyticsData.monthlyData),
-          data: Object.values(analyticsData.monthlyData),
-          color: '#10B981'
+          color: '#8B5CF6'
         };
       case 'time-to-closure':
         return {
-          labels: ['Avg Days'],
-          data: [12.5],
-          value: 12.5,
-          total: 30,
-          percentage: Math.round((12.5 / 30) * 100)
+          labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+          data: [12.5, 11.8, 13.2, 10.9],
+          color: '#10B981'
+        };
+      case 'department-analysis':
+        return {
+          labels: Object.keys(analyticsData.departmentData),
+          data: Object.values(analyticsData.departmentData),
+          color: '#F59E0B'
         };
       case 'capa-effectiveness':
         return {
@@ -148,6 +165,12 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
           value: 87,
           total: 100,
           percentage: 87
+        };
+      case 'monthly-volume':
+        return {
+          labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+          data: [23, 19, 31, 28, 25, 22],
+          color: '#06B6D4'
         };
       default:
         return {
@@ -172,9 +195,7 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
   const exportToPDF = async () => {
     setRefreshing(true);
     await new Promise(resolve => setTimeout(resolve, 2000));
-    console.log('Exporting analytics to PDF...');
     
-    // Create sample PDF content
     const pdfContent = `
 Investigation Analytics Report
 Generated: ${new Date().toLocaleString()}
@@ -187,11 +208,8 @@ Key Metrics:
 - Overdue: ${analyticsData.overdue}
 - Average Progress: ${analyticsData.avgProgress}%
 
-Status Distribution:
-${Object.entries(analyticsData.statusCounts).map(([status, count]) => `- ${status}: ${count}`).join('\n')}
-
-Priority Breakdown:
-${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${priority}: ${count}`).join('\n')}
+Active Charts: ${activeCharts.length}
+${activeCharts.map(id => `- ${availableCharts.find(c => c.id === id)?.title || id}`).join('\n')}
     `;
     
     const blob = new Blob([pdfContent], { type: 'text/plain' });
@@ -248,6 +266,49 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
     if (!chart) return null;
     
     switch (chart.type) {
+      case 'line':
+      case 'step-line':
+        return (
+          <div className="h-full flex items-center justify-center p-4">
+            <div className="w-full h-48">
+              <svg viewBox="0 0 400 160" className="w-full h-full">
+                <defs>
+                  <linearGradient id={`lineGradient-${chartId}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor={data.color || '#3B82F6'} stopOpacity="0.3"/>
+                    <stop offset="100%" stopColor={data.color || '#3B82F6'} stopOpacity="0"/>
+                  </linearGradient>
+                </defs>
+                <polyline
+                  points={data.data.map((value, index) => 
+                    `${50 + (index * 300 / (data.data.length - 1))},${140 - (value / Math.max(...data.data)) * 80}`
+                  ).join(' ')}
+                  fill="none"
+                  stroke={data.color || '#3B82F6'}
+                  strokeWidth="3"
+                  className="transition-all duration-1000"
+                />
+                <polygon
+                  points={`50,140 ${data.data.map((value, index) => 
+                    `${50 + (index * 300 / (data.data.length - 1))},${140 - (value / Math.max(...data.data)) * 80}`
+                  ).join(' ')} 350,140`}
+                  fill={`url(#lineGradient-${chartId})`}
+                  className="transition-all duration-1000"
+                />
+                {data.data.map((value, index) => (
+                  <circle
+                    key={index}
+                    cx={50 + (index * 300 / (data.data.length - 1))}
+                    cy={140 - (value / Math.max(...data.data)) * 80}
+                    r="4"
+                    fill={data.color || '#3B82F6'}
+                    className="transition-all duration-1000"
+                  />
+                ))}
+              </svg>
+            </div>
+          </div>
+        );
+      
       case 'pie':
       case 'donut':
         return (
@@ -266,10 +327,10 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
                         key={index}
                         cx="50"
                         cy="50"
-                        r="15"
+                        r={chart.type === 'donut' ? "15" : "20"}
                         fill="none"
                         stroke={data.colors?.[index] || '#3B82F6'}
-                        strokeWidth="8"
+                        strokeWidth={chart.type === 'donut' ? "8" : "12"}
                         strokeDasharray={strokeDasharray}
                         strokeDashoffset={-strokeDashoffset}
                         className="transition-all duration-500"
@@ -284,7 +345,7 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
                 )}
               </div>
             </div>
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-2 max-h-32 overflow-y-auto">
               {data.labels.map((label, index) => (
                 <div key={index} className="flex items-center justify-between text-sm">
                   <div className="flex items-center space-x-2">
@@ -302,19 +363,23 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
         );
       
       case 'bar':
+      case 'column':
         const maxValue = Math.max(...data.data, 1);
         return (
           <div className="h-full flex flex-col">
-            <div className="flex-1 flex items-end justify-center space-x-3 pb-6">
+            <div className="flex-1 flex items-end justify-center space-x-2 pb-6">
               {data.data.map((value, index) => (
                 <div key={index} className="flex flex-col items-center space-y-2">
                   <div 
-                    className="bg-blue-500 rounded-t transition-all duration-700 w-12 flex items-end justify-center text-white text-xs font-medium pb-1"
-                    style={{ height: `${Math.max((value / maxValue) * 150, 20)}px` }}
+                    className="rounded-t transition-all duration-700 w-8 flex items-end justify-center text-white text-xs font-medium pb-1"
+                    style={{ 
+                      height: `${Math.max((value / maxValue) * 120, 20)}px`,
+                      backgroundColor: data.color || '#3B82F6'
+                    }}
                   >
                     {value > 0 && value}
                   </div>
-                  <span className="text-xs text-gray-600 text-center max-w-16 leading-tight">
+                  <span className="text-xs text-gray-600 text-center max-w-12 leading-tight">
                     {data.labels[index]}
                   </span>
                 </div>
@@ -322,42 +387,27 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
             </div>
           </div>
         );
-      
-      case 'line':
+
+      case 'horizontal-bar':
+        const maxHorizontalValue = Math.max(...data.data, 1);
         return (
-          <div className="h-full flex items-center justify-center p-4">
-            <div className="w-full h-40">
-              <svg viewBox="0 0 300 120" className="w-full h-full">
-                <defs>
-                  <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3"/>
-                    <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"/>
-                  </linearGradient>
-                </defs>
-                <polyline
-                  points="30,80 80,60 130,65 180,45 230,50 280,40"
-                  fill="none"
-                  stroke="#3B82F6"
-                  strokeWidth="3"
-                  className="transition-all duration-1000"
-                />
-                <polygon
-                  points="30,80 80,60 130,65 180,45 230,50 280,40 280,100 30,100"
-                  fill="url(#lineGradient)"
-                  className="transition-all duration-1000"
-                />
-                {[30, 80, 130, 180, 230, 280].map((x, index) => (
-                  <circle
-                    key={index}
-                    cx={x}
-                    cy={[80, 60, 65, 45, 50, 40][index]}
-                    r="4"
-                    fill="#3B82F6"
-                    className="transition-all duration-1000"
-                  />
-                ))}
-              </svg>
-            </div>
+          <div className="h-full flex flex-col justify-center space-y-3 p-4">
+            {data.data.map((value, index) => (
+              <div key={index} className="flex items-center space-x-3">
+                <span className="text-xs text-gray-600 w-16 text-right">{data.labels[index]}</span>
+                <div className="flex-1 bg-gray-200 rounded-full h-4">
+                  <div 
+                    className="h-4 rounded-full transition-all duration-700 flex items-center justify-end pr-2"
+                    style={{ 
+                      width: `${(value / maxHorizontalValue) * 100}%`,
+                      backgroundColor: data.color || '#F59E0B'
+                    }}
+                  >
+                    <span className="text-xs text-white font-medium">{value}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         );
       
@@ -367,15 +417,17 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
             <div className="w-full h-40">
               <svg viewBox="0 0 300 120" className="w-full h-full">
                 <defs>
-                  <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#10B981" stopOpacity="0.6"/>
-                    <stop offset="100%" stopColor="#10B981" stopOpacity="0.1"/>
+                  <linearGradient id={`areaGradient-${chartId}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor={data.color || '#10B981'} stopOpacity="0.6"/>
+                    <stop offset="100%" stopColor={data.color || '#10B981'} stopOpacity="0.1"/>
                   </linearGradient>
                 </defs>
                 <path
-                  d="M30,90 Q80,70 130,75 T230,55 L280,50 L280,100 L30,100 Z"
-                  fill="url(#areaGradient)"
-                  stroke="#10B981"
+                  d={`M30,90 ${data.data.map((value, index) => 
+                    `L${30 + (index * 240 / (data.data.length - 1))},${90 - (value / Math.max(...data.data)) * 60}`
+                  ).join(' ')} L270,90 Z`}
+                  fill={`url(#areaGradient-${chartId})`}
+                  stroke={data.color || '#10B981'}
                   strokeWidth="2"
                   className="transition-all duration-1000"
                 />
@@ -411,16 +463,15 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-xl font-bold text-gray-900">{data.value}</span>
-                <span className="text-xs text-gray-500">
-                  {chartId === 'time-to-closure' ? 'days' : '%'}
-                </span>
+                <span className="text-xs text-gray-500">%</span>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mt-3 text-center">{chart.title.split(' ').slice(-3).join(' ')}</p>
+            <p className="text-sm text-gray-600 mt-3 text-center">{chart.title.split(' ').slice(-2).join(' ')}</p>
           </div>
         );
-      
+
       case 'scatter':
+      case 'bubble':
         return (
           <div className="h-full flex items-center justify-center p-4">
             <div className="w-full h-40">
@@ -430,14 +481,100 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
                     key={i}
                     cx={30 + (i * 12)}
                     cy={30 + Math.random() * 60}
-                    r={2 + Math.random() * 3}
-                    fill="#EF4444"
+                    r={chart.type === 'bubble' ? 2 + Math.random() * 4 : 3}
+                    fill={data.color || '#EF4444'}
                     opacity={0.7}
                     className="transition-all duration-500"
                   />
                 ))}
               </svg>
             </div>
+          </div>
+        );
+
+      case 'heatmap':
+        return (
+          <div className="h-full p-4">
+            <div className="grid grid-cols-7 gap-1 h-full">
+              {Array.from({ length: 35 }, (_, i) => (
+                <div
+                  key={i}
+                  className="rounded transition-all duration-300"
+                  style={{
+                    backgroundColor: `rgba(239, 68, 68, ${Math.random() * 0.8 + 0.1})`
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'radar':
+        return (
+          <div className="h-full flex items-center justify-center p-4">
+            <div className="w-40 h-40">
+              <svg viewBox="0 0 100 100" className="w-full h-full">
+                <polygon
+                  points="50,10 80,30 80,70 50,90 20,70 20,30"
+                  fill="rgba(59, 130, 246, 0.2)"
+                  stroke="#3B82F6"
+                  strokeWidth="2"
+                />
+                <polygon
+                  points="50,20 70,35 70,65 50,80 30,65 30,35"
+                  fill="none"
+                  stroke="#E5E7EB"
+                  strokeWidth="1"
+                />
+                {[0, 1, 2, 3, 4, 5].map(i => (
+                  <line
+                    key={i}
+                    x1="50"
+                    y1="50"
+                    x2={50 + 30 * Math.cos((i * Math.PI) / 3 - Math.PI / 2)}
+                    y2={50 + 30 * Math.sin((i * Math.PI) / 3 - Math.PI / 2)}
+                    stroke="#E5E7EB"
+                    strokeWidth="1"
+                  />
+                ))}
+              </svg>
+            </div>
+          </div>
+        );
+
+      case 'funnel':
+        return (
+          <div className="h-full flex flex-col justify-center space-y-2 p-4">
+            {data.data.map((value, index) => (
+              <div key={index} className="flex items-center space-x-3">
+                <div 
+                  className="h-8 rounded transition-all duration-700 flex items-center justify-center text-white text-sm font-medium"
+                  style={{ 
+                    width: `${(value / Math.max(...data.data)) * 100}%`,
+                    backgroundColor: data.colors?.[index] || '#8B5CF6'
+                  }}
+                >
+                  {value}
+                </div>
+                <span className="text-sm text-gray-600">{data.labels[index]}</span>
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'histogram':
+        return (
+          <div className="h-full flex items-end justify-center space-x-1 pb-6 p-4">
+            {data.data.map((value, index) => (
+              <div
+                key={index}
+                className="transition-all duration-700 w-6 rounded-t"
+                style={{ 
+                  height: `${(value / Math.max(...data.data)) * 100}%`,
+                  backgroundColor: data.color || '#06B6D4'
+                }}
+              />
+            ))}
           </div>
         );
       
@@ -460,21 +597,54 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
     }
   };
 
-  const categories = ['all', ...Array.from(new Set(availableCharts.map(chart => chart.category)))];
-  const filteredCharts = selectedCategory === 'all' 
-    ? availableCharts 
-    : availableCharts.filter(chart => chart.category === selectedCategory);
+  // Auto-refresh effect
+  React.useEffect(() => {
+    if (autoRefresh) {
+      const interval = setInterval(refreshData, 30000); // Refresh every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh]);
 
   return (
     <div className="space-y-6">
-      {/* Analytics Header */}
+      {/* Key Metrics */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600">{analyticsData.total}</div>
+            <div className="text-sm text-gray-600">Total Investigations</div>
+          </div>
+          <div className="text-center p-4 bg-green-50 rounded-lg">
+            <div className="text-2xl font-bold text-green-600">
+              {analyticsData.statusCounts.completed || 0}
+            </div>
+            <div className="text-sm text-gray-600">Completed</div>
+          </div>
+          <div className="text-center p-4 bg-yellow-50 rounded-lg">
+            <div className="text-2xl font-bold text-yellow-600">
+              {analyticsData.statusCounts['in-progress'] || 0}
+            </div>
+            <div className="text-sm text-gray-600">In Progress</div>
+          </div>
+          <div className="text-center p-4 bg-red-50 rounded-lg">
+            <div className="text-2xl font-bold text-red-600">{analyticsData.overdue}</div>
+            <div className="text-sm text-gray-600">Overdue</div>
+          </div>
+          <div className="text-center p-4 bg-purple-50 rounded-lg">
+            <div className="text-2xl font-bold text-purple-600">{analyticsData.avgProgress}%</div>
+            <div className="text-sm text-gray-600">Avg. Progress</div>
+          </div>
+          <div className="text-center p-4 bg-indigo-50 rounded-lg">
+            <div className="text-2xl font-bold text-indigo-600">12.5</div>
+            <div className="text-sm text-gray-600">Avg. Days</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Controls */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Investigation Analytics</h2>
-            <p className="text-sm text-gray-600 mt-1">Comprehensive data visualization and insights</p>
-          </div>
-          
           <div className="flex flex-wrap items-center gap-3">
             {/* Date Range Selector */}
             <div className="flex items-center space-x-2">
@@ -509,14 +679,25 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
                 />
               </div>
             )}
-            
+
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Auto Refresh</span>
+            </label>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={refreshData}
-              disabled={refreshing}
-              className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2 text-sm disabled:opacity-50"
+              onClick={() => setShowChartSelector(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2 text-sm"
             >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
+              <Plus className="h-4 w-4" />
+              <span>Add Chart</span>
             </button>
             
             <button
@@ -529,47 +710,13 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
             </button>
             
             <button
-              onClick={() => setShowChartSelector(true)}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2 text-sm"
+              onClick={refreshData}
+              disabled={refreshing}
+              className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2 text-sm disabled:opacity-50"
             >
-              <Plus className="h-4 w-4" />
-              <span>Add Chart</span>
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <span>Refresh</span>
             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Key Metrics */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">{analyticsData.total}</div>
-            <div className="text-sm text-gray-600">Total Investigations</div>
-          </div>
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">
-              {analyticsData.statusCounts.completed || 0}
-            </div>
-            <div className="text-sm text-gray-600">Completed</div>
-          </div>
-          <div className="text-center p-4 bg-yellow-50 rounded-lg">
-            <div className="text-2xl font-bold text-yellow-600">
-              {analyticsData.statusCounts['in-progress'] || 0}
-            </div>
-            <div className="text-sm text-gray-600">In Progress</div>
-          </div>
-          <div className="text-center p-4 bg-red-50 rounded-lg">
-            <div className="text-2xl font-bold text-red-600">{analyticsData.overdue}</div>
-            <div className="text-sm text-gray-600">Overdue</div>
-          </div>
-          <div className="text-center p-4 bg-purple-50 rounded-lg">
-            <div className="text-2xl font-bold text-purple-600">{analyticsData.avgProgress}%</div>
-            <div className="text-sm text-gray-600">Avg. Progress</div>
-          </div>
-          <div className="text-center p-4 bg-indigo-50 rounded-lg">
-            <div className="text-2xl font-bold text-indigo-600">12.5</div>
-            <div className="text-sm text-gray-600">Avg. Days</div>
           </div>
         </div>
       </div>
@@ -615,27 +762,8 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
               </button>
             </div>
             
-            {/* Category Filter */}
-            <div className="mb-6">
-              <div className="flex flex-wrap gap-2">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                      selectedCategory === category
-                        ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    {category === 'all' ? 'All Categories' : category}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCharts.map((chart) => {
+              {availableCharts.map((chart) => {
                 const Icon = chart.icon;
                 const isActive = activeCharts.includes(chart.id);
                 
