@@ -17,7 +17,7 @@ import { ReportViewer } from './components/Investigation/ReportViewer';
 import { AuditTrail } from './components/Investigation/AuditTrail';
 
 function App() {
-  const [activeModule, setActiveModule] = useState('dashboard');
+  const [activeModule, setActiveModule] = useState('investigation');
   const [currentSection, setCurrentSection] = useState('dashboard');
   const [selectedInvestigationId, setSelectedInvestigationId] = useState<string | null>(null);
   const [selectedSOPId, setSelectedSOPId] = useState<string | null>(null);
@@ -82,21 +82,7 @@ function App() {
   };
   
   const renderContent = () => {
-    // Only show investigation content when investigation module is active
-    if (activeModule !== 'dashboard') {
-      return (
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-              {activeModule.charAt(0).toUpperCase() + activeModule.slice(1)} Module
-            </h2>
-            <p className="text-gray-600">This module is under development</p>
-          </div>
-        </div>
-      );
-    }
-
-    // Handle detailed views for investigation module
+    // Handle detailed views
     if (selectedInvestigationId) {
       return (
         <InvestigationDetails
@@ -124,7 +110,7 @@ function App() {
       );
     }
     
-    // Handle main sections for investigation module
+    // Handle main sections
     switch (currentSection) {
       case 'dashboard':
         return <DashboardView />;
@@ -166,13 +152,7 @@ function App() {
       <div className="flex h-screen bg-gray-50">
         <LeftSidebar 
           activeModule={activeModule}
-          onModuleChange={(module) => {
-            setActiveModule(module);
-            setCurrentSection('dashboard');
-            setSelectedInvestigationId(null);
-            setSelectedSOPId(null);
-            setSelectedReportId(null);
-          }}
+          onModuleChange={setActiveModule}
         />
         
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -181,17 +161,15 @@ function App() {
             subtitle={getSectionSubtitle(currentSection)}
           />
           
-          {activeModule === 'dashboard' && (
-            <TopNavigation
-              currentSection={currentSection}
-              onSectionChange={(section) => {
-                setCurrentSection(section);
-                setSelectedInvestigationId(null);
-                setSelectedSOPId(null);
-                setSelectedReportId(null);
-              }}
-            />
-          )}
+          <TopNavigation
+            currentSection={currentSection}
+            onSectionChange={(section) => {
+              setCurrentSection(section);
+              setSelectedInvestigationId(null);
+              setSelectedSOPId(null);
+              setSelectedReportId(null);
+            }}
+          />
           
           <main className="flex-1 overflow-auto bg-gray-50">
             {currentSection === 'decision-tree' ? (
