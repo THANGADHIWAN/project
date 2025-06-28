@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, User, Calendar, AlertTriangle, Clock, Settings, Filter, Plus, Edit, Eye, Columns, Layout, Grid, List, ChevronDown, Save, RotateCcw } from 'lucide-react';
+import { MoreHorizontal, User, Calendar, AlertTriangle, Clock, Filter, Plus, Edit, Eye, Search, ChevronDown } from 'lucide-react';
 import { StatusBadge } from '../Common/StatusBadge';
 import { ProgressBar } from '../Common/ProgressBar';
 import { Investigation, InvestigationStatus } from '../../types/investigation';
@@ -20,7 +20,7 @@ interface KanbanColumn {
 }
 
 interface ViewSettings {
-  groupBy: 'status' | 'priority' | 'assignee' | 'department';
+  groupBy: 'status' | 'priority' | 'assignee';
   cardSize: 'compact' | 'normal' | 'detailed';
   showProgress: boolean;
   showDueDate: boolean;
@@ -46,21 +46,13 @@ const priorityColumns = [
   { key: 'low', title: 'Low Priority', color: 'text-green-700', bgColor: 'bg-green-50 border-green-200' }
 ];
 
-const savedLayouts = [
-  { name: 'Default View', description: 'Standard investigation workflow' },
-  { name: 'Priority Focus', description: 'Grouped by priority levels' },
-  { name: 'Team View', description: 'Organized by assignee' },
-  { name: 'Compact View', description: 'Minimal card layout' },
-  { name: 'Detailed View', description: 'Full information cards' }
-];
-
 export function InvestigationKanbanView({ investigations, onInvestigationClick, onInvestigationUpdate }: InvestigationKanbanViewProps) {
   const [draggedItem, setDraggedItem] = useState<Investigation | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [localInvestigations, setLocalInvestigations] = useState<Investigation[]>(investigations);
   const [columns, setColumns] = useState<KanbanColumn[]>(defaultColumns);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showLayoutSelector, setShowLayoutSelector] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
   const [newColumnTitle, setNewColumnTitle] = useState('');
   
@@ -78,13 +70,20 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
     setLocalInvestigations(investigations);
   }, [investigations]);
 
+  const filteredInvestigations = localInvestigations.filter(inv => {
+    const matchesSearch = inv.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         inv.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         inv.assignedTo.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
   const getInvestigationsByGroup = (groupKey: string) => {
     if (viewSettings.groupBy === 'status') {
-      return localInvestigations.filter(inv => inv.status === groupKey);
+      return filteredInvestigations.filter(inv => inv.status === groupKey);
     } else if (viewSettings.groupBy === 'priority') {
-      return localInvestigations.filter(inv => inv.priority === groupKey);
+      return filteredInvestigations.filter(inv => inv.priority === groupKey);
     } else if (viewSettings.groupBy === 'assignee') {
-      return localInvestigations.filter(inv => inv.assignedTo === groupKey);
+      return filteredInvestigations.filter(inv => inv.assignedTo === groupKey);
     }
     return [];
   };
@@ -102,7 +101,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
         order: 0
       }));
     } else if (viewSettings.groupBy === 'assignee') {
-      const assignees = [...new Set(localInvestigations.map(inv => inv.assignedTo))];
+      const assignees = [...new Set(filteredInvestigations.map(inv => inv.assignedTo))];
       return assignees.map((assignee, index) => ({
         status: assignee as InvestigationStatus,
         title: assignee,
@@ -153,6 +152,27 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
       
       if (viewSettings.groupBy === 'status' && draggedItem.status !== targetGroup) {
         updates.status = targetGroup as InvestigationStatus;
+        // Update completion percentage based on status
+        switch (targetGroup) {
+          case 'initiated':
+            updates.completionPercentage = 10;
+            break;
+          case 'in-progress':
+            updates.completionPercentage = 30;
+            break;
+          case 'rca-pending':
+            updates.completionPercentage = 50;
+            break;
+          case 'capa-pending':
+            updates.completionPercentage = 75;
+            break;
+          case 'approval-pending':
+            updates.completionPercentage = 90;
+            break;
+          case 'completed':
+            updates.completionPercentage = 100;
+            break;
+        }
       } else if (viewSettings.groupBy === 'priority' && draggedItem.priority !== targetGroup) {
         updates.priority = targetGroup as any;
       } else if (viewSettings.groupBy === 'assignee' && draggedItem.assignedTo !== targetGroup) {
@@ -160,7 +180,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
       }
       
       if (Object.keys(updates).length > 0) {
-        const updatedInvestigation = { ...draggedItem, ...updates };
+        const updatedInvestigation = { ...draggedItem, ...updates, updatedAt: new Date().toISOString() };
         
         setLocalInvestigations(prev => 
           prev.map(inv => 
@@ -193,42 +213,6 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
     ));
     setEditingColumn(null);
     setNewColumnTitle('');
-  };
-
-  const reorderColumns = (fromIndex: number, toIndex: number) => {
-    setColumns(prev => {
-      const newColumns = [...prev];
-      const [removed] = newColumns.splice(fromIndex, 1);
-      newColumns.splice(toIndex, 0, removed);
-      return newColumns.map((col, index) => ({ ...col, order: index }));
-    });
-  };
-
-  const saveCurrentLayout = () => {
-    const layoutName = prompt('Enter layout name:');
-    if (layoutName) {
-      console.log('Saving layout:', layoutName, { columns, viewSettings });
-      // Here you would save to localStorage or backend
-    }
-  };
-
-  const loadLayout = (layoutName: string) => {
-    console.log('Loading layout:', layoutName);
-    // Here you would load from localStorage or backend
-    setShowLayoutSelector(false);
-  };
-
-  const resetToDefault = () => {
-    setColumns(defaultColumns);
-    setViewSettings({
-      groupBy: 'status',
-      cardSize: 'normal',
-      showProgress: true,
-      showDueDate: true,
-      showAssignee: true,
-      autoRefresh: false,
-      columnsPerRow: 4
-    });
   };
 
   const InvestigationCard = ({ investigation }: { investigation: Investigation }) => {
@@ -335,14 +319,27 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      {/* Search and Filters */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Investigation Board</h3>
-          <p className="text-sm text-gray-600">
-            {viewSettings.groupBy === 'status' ? 'Drag cards between columns to update status' :
-             viewSettings.groupBy === 'priority' ? 'Organized by priority levels' :
-             'Grouped by team members'}
-          </p>
+        <div className="flex items-center space-x-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Search investigations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          
+          <button
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
+          >
+            <Filter className="h-4 w-4" />
+            <span>Advanced Filter</span>
+          </button>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
@@ -360,94 +357,42 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
             </select>
           </div>
 
-          {/* Layout Selector */}
-          <div className="relative">
-            <button
-              onClick={() => setShowLayoutSelector(!showLayoutSelector)}
-              className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+          {/* Card Size */}
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">Card Size:</label>
+            <select
+              value={viewSettings.cardSize}
+              onChange={(e) => setViewSettings(prev => ({ ...prev, cardSize: e.target.value as any }))}
+              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
             >
-              <Layout className="h-4 w-4" />
-              <span>Layouts</span>
-              <ChevronDown className="h-3 w-3" />
-            </button>
-            
-            {showLayoutSelector && (
-              <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                <div className="p-3 border-b border-gray-200">
-                  <h4 className="font-medium text-gray-900">Saved Layouts</h4>
-                </div>
-                <div className="p-2">
-                  {savedLayouts.map((layout) => (
-                    <button
-                      key={layout.name}
-                      onClick={() => loadLayout(layout.name)}
-                      className="w-full text-left p-2 hover:bg-gray-50 rounded text-sm"
-                    >
-                      <div className="font-medium text-gray-900">{layout.name}</div>
-                      <div className="text-xs text-gray-500">{layout.description}</div>
-                    </button>
-                  ))}
-                </div>
-                <div className="p-2 border-t border-gray-200">
-                  <button
-                    onClick={saveCurrentLayout}
-                    className="w-full flex items-center space-x-2 p-2 text-blue-600 hover:bg-blue-50 rounded text-sm"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>Save Current Layout</span>
-                  </button>
-                </div>
-              </div>
-            )}
+              <option value="compact">Compact</option>
+              <option value="normal">Normal</option>
+              <option value="detailed">Detailed</option>
+            </select>
           </div>
-          
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
-          >
-            <Settings className="h-4 w-4" />
-            <span>Customize</span>
-          </button>
+
+          {/* Columns per Row */}
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">Columns:</label>
+            <select
+              value={viewSettings.columnsPerRow}
+              onChange={(e) => setViewSettings(prev => ({ ...prev, columnsPerRow: Number(e.target.value) as any }))}
+              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={3}>3</option>
+              <option value={4}>4</option>
+              <option value={5}>5</option>
+              <option value={6}>6</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Settings Panel */}
-      {showSettings && (
+      {/* Advanced Filters Panel */}
+      {showAdvancedFilters && (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* View Settings */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-900 mb-3">View Settings</h4>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm text-gray-700">Card Size:</label>
-                  <select
-                    value={viewSettings.cardSize}
-                    onChange={(e) => setViewSettings(prev => ({ ...prev, cardSize: e.target.value as any }))}
-                    className="w-full mt-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                  >
-                    <option value="compact">Compact</option>
-                    <option value="normal">Normal</option>
-                    <option value="detailed">Detailed</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-700">Columns per Row:</label>
-                  <select
-                    value={viewSettings.columnsPerRow}
-                    onChange={(e) => setViewSettings(prev => ({ ...prev, columnsPerRow: Number(e.target.value) as any }))}
-                    className="w-full mt-1 px-2 py-1 border border-gray-300 rounded text-sm"
-                  >
-                    <option value={3}>3 Columns</option>
-                    <option value={4}>4 Columns</option>
-                    <option value={5}>5 Columns</option>
-                    <option value={6}>6 Columns</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Card Content */}
+            {/* Card Content Options */}
             <div>
               <h4 className="text-sm font-medium text-gray-900 mb-3">Card Content</h4>
               <div className="space-y-2">
@@ -518,15 +463,37 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
                     </div>
                   ))}
                 </div>
-                <button
-                  onClick={resetToDefault}
-                  className="mt-3 flex items-center space-x-1 text-xs text-gray-600 hover:text-gray-800"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  <span>Reset to Default</span>
-                </button>
               </div>
             )}
+
+            {/* Quick Stats */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Quick Stats</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Cards:</span>
+                  <span className="font-medium">{filteredInvestigations.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Overdue:</span>
+                  <span className="font-medium text-red-600">
+                    {filteredInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Critical:</span>
+                  <span className="font-medium text-orange-600">
+                    {filteredInvestigations.filter(inv => inv.priority === 'critical').length}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Avg Progress:</span>
+                  <span className="font-medium text-blue-600">
+                    {filteredInvestigations.length > 0 ? Math.round(filteredInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / filteredInvestigations.length) : 0}%
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -630,24 +597,24 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
       <div className="mt-6 pt-6 border-t border-gray-200">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-gray-900">{localInvestigations.length}</div>
+            <div className="text-2xl font-bold text-gray-900">{filteredInvestigations.length}</div>
             <div className="text-sm text-gray-600">Total Cards</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-blue-600">
-              {localInvestigations.filter(inv => inv.status === 'in-progress').length}
+              {filteredInvestigations.filter(inv => inv.status === 'in-progress').length}
             </div>
             <div className="text-sm text-gray-600">In Progress</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-red-600">
-              {localInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
+              {filteredInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
             </div>
             <div className="text-sm text-gray-600">Overdue</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-green-600">
-              {localInvestigations.length > 0 ? Math.round(localInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / localInvestigations.length) : 0}%
+              {filteredInvestigations.length > 0 ? Math.round(filteredInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / filteredInvestigations.length) : 0}%
             </div>
             <div className="text-sm text-gray-600">Avg Progress</div>
           </div>

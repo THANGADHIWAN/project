@@ -1,18 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Download, Save, BarChart3, PieChart, TrendingUp, Activity, Grid3X3, X, Settings, Layout, Maximize2, Minimize2, RefreshCw } from 'lucide-react';
+import { Plus, Download, BarChart3, PieChart, TrendingUp, Activity, X, RefreshCw, Calendar, Filter } from 'lucide-react';
 import { Investigation } from '../../types/investigation';
 
 interface InvestigationAnalyticsViewProps {
   investigations: Investigation[];
-}
-
-interface AnalyticsWidget {
-  id: string;
-  title: string;
-  type: string;
-  size: 'small' | 'medium' | 'large';
-  position: { x: number; y: number };
-  data?: any;
 }
 
 interface ChartData {
@@ -25,6 +16,12 @@ interface ChartData {
   percentage?: number;
 }
 
+interface DateRange {
+  start: string;
+  end: string;
+  preset: 'week' | 'month' | 'quarter' | 'year' | 'custom';
+}
+
 const availableCharts = [
   { id: 'status-distribution', title: 'Investigation Status Distribution', type: 'pie', icon: PieChart, category: 'Status' },
   { id: 'priority-breakdown', title: 'Priority Breakdown', type: 'donut', icon: PieChart, category: 'Priority' },
@@ -32,81 +29,72 @@ const availableCharts = [
   { id: 'workload-distribution', title: 'Investigator Workload', type: 'bar', icon: BarChart3, category: 'Resources' },
   { id: 'age-distribution', title: 'Investigation Age Distribution', type: 'histogram', icon: BarChart3, category: 'Time' },
   { id: 'monthly-volume', title: 'Monthly Investigation Volume', type: 'area', icon: Activity, category: 'Volume' },
-  { id: 'department-split', title: 'Department-wise Split', type: 'treemap', icon: Grid3X3, category: 'Organization' },
   { id: 'time-to-closure', title: 'Average Time to Closure', type: 'gauge', icon: Activity, category: 'Performance' },
   { id: 'overdue-analysis', title: 'Overdue Analysis', type: 'scatter', icon: TrendingUp, category: 'Risk' },
-  { id: 'repeat-incidents', title: 'Repeat Incidents Count', type: 'heatmap', icon: Grid3X3, category: 'Quality' },
   { id: 'capa-effectiveness', title: 'CAPA Effectiveness Rate', type: 'progress', icon: BarChart3, category: 'Quality' },
-  { id: 'investigation-funnel', title: 'Investigation Outcomes Funnel', type: 'funnel', icon: TrendingUp, category: 'Process' },
-  { id: 'seasonal-patterns', title: 'Seasonal Investigation Patterns', type: 'radar', icon: Activity, category: 'Trends' },
-  { id: 'root-cause-frequency', title: 'Root Cause Frequency', type: 'wordcloud', icon: PieChart, category: 'Analysis' },
-  { id: 'sla-compliance', title: 'SLA Compliance Rate', type: 'gauge', icon: Activity, category: 'Performance' },
-  { id: 'investigation-complexity', title: 'Investigation Complexity Matrix', type: 'bubble', icon: Grid3X3, category: 'Analysis' },
-  { id: 'resource-utilization', title: 'Resource Utilization', type: 'stacked-bar', icon: BarChart3, category: 'Resources' },
-  { id: 'quality-metrics', title: 'Quality Metrics Dashboard', type: 'multi-metric', icon: Activity, category: 'Quality' },
-  { id: 'trend-correlation', title: 'Trend Correlation Analysis', type: 'correlation', icon: TrendingUp, category: 'Analysis' },
-  { id: 'performance-scorecard', title: 'Performance Scorecard', type: 'scorecard', icon: BarChart3, category: 'Performance' }
+  { id: 'investigation-funnel', title: 'Investigation Outcomes Funnel', type: 'funnel', icon: TrendingUp, category: 'Process' }
 ];
 
-const predefinedLayouts = {
-  'Executive Summary': [
-    { id: 'status-distribution', title: 'Investigation Status Distribution', type: 'pie', size: 'medium' as const, position: { x: 0, y: 0 } },
-    { id: 'priority-breakdown', title: 'Priority Breakdown', type: 'donut', size: 'medium' as const, position: { x: 1, y: 0 } },
-    { id: 'sla-compliance', title: 'SLA Compliance Rate', type: 'gauge', size: 'medium' as const, position: { x: 2, y: 0 } },
-    { id: 'performance-scorecard', title: 'Performance Scorecard', type: 'scorecard', size: 'large' as const, position: { x: 0, y: 1 } }
-  ],
-  'Operational View': [
-    { id: 'workload-distribution', title: 'Investigator Workload', type: 'bar', size: 'large' as const, position: { x: 0, y: 0 } },
-    { id: 'overdue-analysis', title: 'Overdue Analysis', type: 'scatter', size: 'medium' as const, position: { x: 2, y: 0 } },
-    { id: 'completion-trend', title: 'Completion Trend Over Time', type: 'line', size: 'large' as const, position: { x: 0, y: 1 } },
-    { id: 'resource-utilization', title: 'Resource Utilization', type: 'stacked-bar', size: 'medium' as const, position: { x: 2, y: 1 } }
-  ],
-  'Quality Focus': [
-    { id: 'capa-effectiveness', title: 'CAPA Effectiveness Rate', type: 'progress', size: 'medium' as const, position: { x: 0, y: 0 } },
-    { id: 'repeat-incidents', title: 'Repeat Incidents Count', type: 'heatmap', size: 'medium' as const, position: { x: 1, y: 0 } },
-    { id: 'root-cause-frequency', title: 'Root Cause Frequency', type: 'wordcloud', size: 'medium' as const, position: { x: 2, y: 0 } },
-    { id: 'quality-metrics', title: 'Quality Metrics Dashboard', type: 'multi-metric', size: 'large' as const, position: { x: 0, y: 1 } }
-  ]
-};
-
 export function InvestigationAnalyticsView({ investigations }: InvestigationAnalyticsViewProps) {
-  const [activeWidgets, setActiveWidgets] = useState<AnalyticsWidget[]>([
-    { id: 'status-distribution', title: 'Investigation Status Distribution', type: 'pie', size: 'medium', position: { x: 0, y: 0 } },
-    { id: 'priority-breakdown', title: 'Priority Breakdown', type: 'donut', size: 'medium', position: { x: 1, y: 0 } },
-    { id: 'completion-trend', title: 'Completion Trend Over Time', type: 'line', size: 'large', position: { x: 2, y: 0 } },
-    { id: 'workload-distribution', title: 'Investigator Workload', type: 'bar', size: 'medium', position: { x: 0, y: 1 } }
+  const [activeCharts, setActiveCharts] = useState<string[]>([
+    'status-distribution',
+    'priority-breakdown', 
+    'completion-trend',
+    'workload-distribution',
+    'monthly-volume'
   ]);
   const [showChartSelector, setShowChartSelector] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [currentLayout, setCurrentLayout] = useState<string>('Custom');
-  const [isGridMode, setIsGridMode] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange>({
+    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0],
+    preset: 'month'
+  });
+
+  // Filter investigations by date range
+  const filteredInvestigations = useMemo(() => {
+    const startDate = new Date(dateRange.start);
+    const endDate = new Date(dateRange.end);
+    
+    return investigations.filter(inv => {
+      const createdDate = new Date(inv.createdAt);
+      return createdDate >= startDate && createdDate <= endDate;
+    });
+  }, [investigations, dateRange]);
 
   // Memoized analytics data
   const analyticsData = useMemo(() => {
-    const statusCounts = investigations.reduce((acc, inv) => {
+    const statusCounts = filteredInvestigations.reduce((acc, inv) => {
       acc[inv.status] = (acc[inv.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const priorityCounts = investigations.reduce((acc, inv) => {
+    const priorityCounts = filteredInvestigations.reduce((acc, inv) => {
       acc[inv.priority] = (acc[inv.priority] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const assigneeCounts = investigations.reduce((acc, inv) => {
+    const assigneeCounts = filteredInvestigations.reduce((acc, inv) => {
       acc[inv.assignedTo] = (acc[inv.assignedTo] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const overdue = investigations.filter(inv => {
+    const overdue = filteredInvestigations.filter(inv => {
       const daysRemaining = Math.ceil((new Date(inv.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
       return daysRemaining < 0;
     }).length;
 
-    const avgProgress = investigations.length > 0 
-      ? Math.round(investigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / investigations.length)
+    const avgProgress = filteredInvestigations.length > 0 
+      ? Math.round(filteredInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / filteredInvestigations.length)
       : 0;
+
+    // Monthly volume data
+    const monthlyData = filteredInvestigations.reduce((acc, inv) => {
+      const month = new Date(inv.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      acc[month] = (acc[month] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
 
     return {
       statusCounts,
@@ -114,11 +102,12 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
       assigneeCounts,
       overdue,
       avgProgress,
-      total: investigations.length
+      total: filteredInvestigations.length,
+      monthlyData
     };
-  }, [investigations]);
+  }, [filteredInvestigations]);
 
-  const generateChartData = (type: string, chartId: string): ChartData => {
+  const generateChartData = (chartId: string): ChartData => {
     switch (chartId) {
       case 'status-distribution':
         return {
@@ -138,14 +127,19 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
           data: Object.values(analyticsData.assigneeCounts),
           color: '#3B82F6'
         };
-      case 'sla-compliance':
-        const compliance = Math.round(((analyticsData.total - analyticsData.overdue) / analyticsData.total) * 100);
+      case 'monthly-volume':
         return {
-          labels: ['Compliance'],
-          data: [compliance],
-          value: compliance,
-          total: 100,
-          percentage: compliance
+          labels: Object.keys(analyticsData.monthlyData),
+          data: Object.values(analyticsData.monthlyData),
+          color: '#10B981'
+        };
+      case 'time-to-closure':
+        return {
+          labels: ['Avg Days'],
+          data: [12.5],
+          value: 12.5,
+          total: 30,
+          percentage: Math.round((12.5 / 30) * 100)
         };
       case 'capa-effectiveness':
         return {
@@ -164,52 +158,53 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
     }
   };
 
-  const addWidget = (chartId: string) => {
-    const chart = availableCharts.find(c => c.id === chartId);
-    if (chart && !activeWidgets.find(w => w.id === chartId)) {
-      const newWidget: AnalyticsWidget = {
-        id: chart.id,
-        title: chart.title,
-        type: chart.type,
-        size: 'medium',
-        position: { x: activeWidgets.length % 3, y: Math.floor(activeWidgets.length / 3) }
-      };
-      setActiveWidgets(prev => [...prev, newWidget]);
+  const addChart = (chartId: string) => {
+    if (!activeCharts.includes(chartId)) {
+      setActiveCharts(prev => [...prev, chartId]);
     }
     setShowChartSelector(false);
   };
 
-  const removeWidget = (widgetId: string) => {
-    setActiveWidgets(prev => prev.filter(w => w.id !== widgetId));
-  };
-
-  const updateWidgetSize = (widgetId: string, size: 'small' | 'medium' | 'large') => {
-    setActiveWidgets(prev => prev.map(w => 
-      w.id === widgetId ? { ...w, size } : w
-    ));
-  };
-
-  const loadLayout = (layoutName: string) => {
-    if (layoutName in predefinedLayouts) {
-      setActiveWidgets(predefinedLayouts[layoutName as keyof typeof predefinedLayouts]);
-      setCurrentLayout(layoutName);
-    }
+  const removeChart = (chartId: string) => {
+    setActiveCharts(prev => prev.filter(id => id !== chartId));
   };
 
   const exportToPDF = async () => {
     setRefreshing(true);
-    // Simulate export process
     await new Promise(resolve => setTimeout(resolve, 2000));
     console.log('Exporting analytics to PDF...');
-    setRefreshing(false);
-  };
+    
+    // Create sample PDF content
+    const pdfContent = `
+Investigation Analytics Report
+Generated: ${new Date().toLocaleString()}
+Date Range: ${dateRange.start} to ${dateRange.end}
 
-  const saveLayout = () => {
-    const layoutName = prompt('Enter layout name:');
-    if (layoutName) {
-      console.log('Layout saved:', layoutName, activeWidgets);
-      setCurrentLayout(layoutName);
-    }
+Key Metrics:
+- Total Investigations: ${analyticsData.total}
+- Completed: ${analyticsData.statusCounts.completed || 0}
+- In Progress: ${analyticsData.statusCounts['in-progress'] || 0}
+- Overdue: ${analyticsData.overdue}
+- Average Progress: ${analyticsData.avgProgress}%
+
+Status Distribution:
+${Object.entries(analyticsData.statusCounts).map(([status, count]) => `- ${status}: ${count}`).join('\n')}
+
+Priority Breakdown:
+${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${priority}: ${count}`).join('\n')}
+    `;
+    
+    const blob = new Blob([pdfContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `investigation_analytics_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    setRefreshing(false);
   };
 
   const refreshData = async () => {
@@ -218,29 +213,51 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
     setRefreshing(false);
   };
 
-  const getWidgetSizeClass = (size: string) => {
-    if (!isGridMode) return 'w-full';
-    switch (size) {
-      case 'small': return 'col-span-1 row-span-1';
-      case 'large': return 'col-span-2 row-span-2';
-      default: return 'col-span-1 row-span-1';
+  const setDatePreset = (preset: DateRange['preset']) => {
+    const now = new Date();
+    let start: Date;
+    
+    switch (preset) {
+      case 'week':
+        start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case 'quarter':
+        start = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case 'year':
+        start = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        return;
     }
+    
+    setDateRange({
+      start: start.toISOString().split('T')[0],
+      end: now.toISOString().split('T')[0],
+      preset
+    });
   };
 
-  const renderChart = (widget: AnalyticsWidget) => {
-    const data = generateChartData(widget.type, widget.id);
+  const renderChart = (chartId: string) => {
+    const chart = availableCharts.find(c => c.id === chartId);
+    const data = generateChartData(chartId);
     
-    switch (widget.type) {
+    if (!chart) return null;
+    
+    switch (chart.type) {
       case 'pie':
       case 'donut':
         return (
           <div className="h-full flex flex-col">
             <div className="flex-1 flex items-center justify-center">
-              <div className="relative w-32 h-32">
+              <div className="relative w-40 h-40">
                 <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                   {data.data.map((value, index) => {
                     const total = data.data.reduce((a, b) => a + b, 0);
-                    const percentage = (value / total) * 100;
+                    const percentage = total > 0 ? (value / total) * 100 : 0;
                     const strokeDasharray = `${percentage} ${100 - percentage}`;
                     const strokeDashoffset = data.data.slice(0, index).reduce((acc, val) => acc + (val / total) * 100, 0);
                     
@@ -255,21 +272,21 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
                         strokeWidth="8"
                         strokeDasharray={strokeDasharray}
                         strokeDashoffset={-strokeDashoffset}
-                        className="transition-all duration-300"
+                        className="transition-all duration-500"
                       />
                     );
                   })}
                 </svg>
-                {widget.type === 'donut' && (
+                {chart.type === 'donut' && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-lg font-bold text-gray-900">{data.data.reduce((a, b) => a + b, 0)}</span>
+                    <span className="text-xl font-bold text-gray-900">{data.data.reduce((a, b) => a + b, 0)}</span>
                   </div>
                 )}
               </div>
             </div>
-            <div className="mt-2 space-y-1">
+            <div className="mt-4 space-y-2">
               {data.labels.map((label, index) => (
-                <div key={index} className="flex items-center justify-between text-xs">
+                <div key={index} className="flex items-center justify-between text-sm">
                   <div className="flex items-center space-x-2">
                     <div 
                       className="w-3 h-3 rounded-full" 
@@ -285,22 +302,84 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
         );
       
       case 'bar':
-        const maxValue = Math.max(...data.data);
+        const maxValue = Math.max(...data.data, 1);
         return (
           <div className="h-full flex flex-col">
-            <div className="flex-1 flex items-end justify-center space-x-2 pb-4">
+            <div className="flex-1 flex items-end justify-center space-x-3 pb-6">
               {data.data.map((value, index) => (
-                <div key={index} className="flex flex-col items-center space-y-1">
+                <div key={index} className="flex flex-col items-center space-y-2">
                   <div 
-                    className="bg-blue-500 rounded-t transition-all duration-500 w-8"
-                    style={{ height: `${(value / maxValue) * 120}px` }}
-                  />
-                  <span className="text-xs text-gray-600 transform rotate-45 origin-left">
-                    {data.labels[index].split(' ')[0]}
+                    className="bg-blue-500 rounded-t transition-all duration-700 w-12 flex items-end justify-center text-white text-xs font-medium pb-1"
+                    style={{ height: `${Math.max((value / maxValue) * 150, 20)}px` }}
+                  >
+                    {value > 0 && value}
+                  </div>
+                  <span className="text-xs text-gray-600 text-center max-w-16 leading-tight">
+                    {data.labels[index]}
                   </span>
-                  <span className="text-xs font-medium text-gray-900">{value}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        );
+      
+      case 'line':
+        return (
+          <div className="h-full flex items-center justify-center p-4">
+            <div className="w-full h-40">
+              <svg viewBox="0 0 300 120" className="w-full h-full">
+                <defs>
+                  <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3"/>
+                    <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"/>
+                  </linearGradient>
+                </defs>
+                <polyline
+                  points="30,80 80,60 130,65 180,45 230,50 280,40"
+                  fill="none"
+                  stroke="#3B82F6"
+                  strokeWidth="3"
+                  className="transition-all duration-1000"
+                />
+                <polygon
+                  points="30,80 80,60 130,65 180,45 230,50 280,40 280,100 30,100"
+                  fill="url(#lineGradient)"
+                  className="transition-all duration-1000"
+                />
+                {[30, 80, 130, 180, 230, 280].map((x, index) => (
+                  <circle
+                    key={index}
+                    cx={x}
+                    cy={[80, 60, 65, 45, 50, 40][index]}
+                    r="4"
+                    fill="#3B82F6"
+                    className="transition-all duration-1000"
+                  />
+                ))}
+              </svg>
+            </div>
+          </div>
+        );
+      
+      case 'area':
+        return (
+          <div className="h-full flex items-center justify-center p-4">
+            <div className="w-full h-40">
+              <svg viewBox="0 0 300 120" className="w-full h-full">
+                <defs>
+                  <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#10B981" stopOpacity="0.6"/>
+                    <stop offset="100%" stopColor="#10B981" stopOpacity="0.1"/>
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M30,90 Q80,70 130,75 T230,55 L280,50 L280,100 L30,100 Z"
+                  fill="url(#areaGradient)"
+                  stroke="#10B981"
+                  strokeWidth="2"
+                  className="transition-all duration-1000"
+                />
+              </svg>
             </div>
           </div>
         );
@@ -309,7 +388,7 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
         const percentage = data.percentage || 0;
         return (
           <div className="h-full flex flex-col items-center justify-center">
-            <div className="relative w-24 h-24">
+            <div className="relative w-32 h-32">
               <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                 <circle
                   cx="50"
@@ -330,33 +409,30 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
                   className="transition-all duration-1000"
                 />
               </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-lg font-bold text-gray-900">{percentage}%</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-xl font-bold text-gray-900">{data.value}</span>
+                <span className="text-xs text-gray-500">
+                  {chartId === 'time-to-closure' ? 'days' : '%'}
+                </span>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mt-2 text-center">{widget.title.split(' ').slice(-2).join(' ')}</p>
+            <p className="text-sm text-gray-600 mt-3 text-center">{chart.title.split(' ').slice(-3).join(' ')}</p>
           </div>
         );
       
-      case 'line':
+      case 'scatter':
         return (
-          <div className="h-full flex items-center justify-center">
-            <div className="w-full h-32">
-              <svg viewBox="0 0 200 80" className="w-full h-full">
-                <polyline
-                  points="10,60 50,40 90,45 130,25 170,30"
-                  fill="none"
-                  stroke="#3B82F6"
-                  strokeWidth="2"
-                  className="transition-all duration-500"
-                />
-                {[10, 50, 90, 130, 170].map((x, index) => (
+          <div className="h-full flex items-center justify-center p-4">
+            <div className="w-full h-40">
+              <svg viewBox="0 0 300 120" className="w-full h-full">
+                {Array.from({ length: 20 }, (_, i) => (
                   <circle
-                    key={index}
-                    cx={x}
-                    cy={[60, 40, 45, 25, 30][index]}
-                    r="3"
-                    fill="#3B82F6"
+                    key={i}
+                    cx={30 + (i * 12)}
+                    cy={30 + Math.random() * 60}
+                    r={2 + Math.random() * 3}
+                    fill="#EF4444"
+                    opacity={0.7}
                     className="transition-all duration-500"
                   />
                 ))}
@@ -369,11 +445,11 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
         return (
           <div className="h-full flex items-center justify-center bg-gray-50 rounded">
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
                 <BarChart3 className="h-8 w-8 text-blue-600" />
               </div>
               <p className="text-sm text-gray-600 capitalize">
-                {widget.type.replace('-', ' ')} Chart
+                {chart.type.replace('-', ' ')} Chart
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 Interactive visualization
@@ -400,26 +476,39 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
-            <select 
-              value={currentLayout}
-              onChange={(e) => loadLayout(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="Custom">Custom Layout</option>
-              {Object.keys(predefinedLayouts).map((layout) => (
-                <option key={layout} value={layout}>{layout}</option>
-              ))}
-            </select>
+            {/* Date Range Selector */}
+            <div className="flex items-center space-x-2">
+              <Calendar className="h-4 w-4 text-gray-500" />
+              <select 
+                value={dateRange.preset}
+                onChange={(e) => setDatePreset(e.target.value as DateRange['preset'])}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="week">Last Week</option>
+                <option value="month">Last Month</option>
+                <option value="quarter">Last Quarter</option>
+                <option value="year">Last Year</option>
+                <option value="custom">Custom Range</option>
+              </select>
+            </div>
             
-            <button
-              onClick={() => setIsGridMode(!isGridMode)}
-              className={`px-3 py-2 border rounded-lg text-sm flex items-center space-x-2 ${
-                isGridMode ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <Layout className="h-4 w-4" />
-              <span>{isGridMode ? 'Grid' : 'List'}</span>
-            </button>
+            {dateRange.preset === 'custom' && (
+              <div className="flex items-center space-x-2">
+                <input
+                  type="date"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-gray-500">to</span>
+                <input
+                  type="date"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            )}
             
             <button
               onClick={refreshData}
@@ -431,20 +520,12 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
             </button>
             
             <button
-              onClick={saveLayout}
-              className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2 text-sm"
-            >
-              <Save className="h-4 w-4" />
-              <span>Save Layout</span>
-            </button>
-            
-            <button
               onClick={exportToPDF}
               disabled={refreshing}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2 text-sm disabled:opacity-50"
             >
               <Download className="h-4 w-4" />
-              <span>{refreshing ? 'Exporting...' : 'Export PDF'}</span>
+              <span>{refreshing ? 'Exporting...' : 'Export'}</span>
             </button>
             
             <button
@@ -458,7 +539,7 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {/* Key Metrics */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
@@ -493,49 +574,37 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
         </div>
       </div>
 
-      {/* Analytics Grid */}
-      <div className={isGridMode 
-        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
-        : "space-y-6"
-      }>
-        {activeWidgets.map((widget) => (
-          <div
-            key={widget.id}
-            className={`bg-white rounded-lg shadow-sm border border-gray-200 ${getWidgetSizeClass(widget.size)}`}
-          >
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-gray-900">{widget.title}</h3>
-                <div className="flex items-center space-x-2">
-                  <select
-                    value={widget.size}
-                    onChange={(e) => updateWidgetSize(widget.id, e.target.value as any)}
-                    className="text-xs border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="small">Small</option>
-                    <option value="medium">Medium</option>
-                    <option value="large">Large</option>
-                  </select>
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {activeCharts.map((chartId) => {
+          const chart = availableCharts.find(c => c.id === chartId);
+          if (!chart) return null;
+          
+          return (
+            <div key={chartId} className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="p-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-gray-900">{chart.title}</h3>
                   <button
-                    onClick={() => removeWidget(widget.id)}
+                    onClick={() => removeChart(chartId)}
                     className="text-gray-400 hover:text-red-600 p-1 rounded hover:bg-red-50"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
               </div>
+              <div className="p-4 h-64">
+                {renderChart(chartId)}
+              </div>
             </div>
-            <div className={`p-4 ${widget.size === 'large' ? 'h-80' : widget.size === 'small' ? 'h-48' : 'h-64'}`}>
-              {renderChart(widget)}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Chart Selector Modal */}
       {showChartSelector && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-6xl max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-gray-900">Add Visualization</h3>
               <button
@@ -568,12 +637,12 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredCharts.map((chart) => {
                 const Icon = chart.icon;
-                const isActive = activeWidgets.some(w => w.id === chart.id);
+                const isActive = activeCharts.includes(chart.id);
                 
                 return (
                   <button
                     key={chart.id}
-                    onClick={() => !isActive && addWidget(chart.id)}
+                    onClick={() => !isActive && addChart(chart.id)}
                     disabled={isActive}
                     className={`p-4 border rounded-lg text-left transition-all ${
                       isActive 
