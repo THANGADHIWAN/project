@@ -26,7 +26,6 @@ interface ViewSettings {
   showDueDate: boolean;
   showAssignee: boolean;
   autoRefresh: boolean;
-  columnsPerRow: 3 | 4 | 5 | 6;
 }
 
 const defaultColumns: KanbanColumn[] = [
@@ -62,8 +61,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
     showProgress: true,
     showDueDate: true,
     showAssignee: true,
-    autoRefresh: false,
-    columnsPerRow: 4
+    autoRefresh: false
   });
 
   React.useEffect(() => {
@@ -370,21 +368,6 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
               <option value="detailed">Detailed</option>
             </select>
           </div>
-
-          {/* Columns per Row */}
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700">Columns:</label>
-            <select
-              value={viewSettings.columnsPerRow}
-              onChange={(e) => setViewSettings(prev => ({ ...prev, columnsPerRow: Number(e.target.value) as any }))}
-              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value={3}>3</option>
-              <option value={4}>4</option>
-              <option value={5}>5</option>
-              <option value={6}>6</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -528,8 +511,15 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
         </div>
       )}
       
-      <div className="overflow-x-auto">
-        <div className={`grid gap-4 min-w-max pb-4`} style={{ gridTemplateColumns: `repeat(${Math.min(groupColumns.length, viewSettings.columnsPerRow)}, minmax(280px, 1fr))` }}>
+      {/* Kanban Board - Always Horizontal */}
+      <div className="w-full overflow-x-auto">
+        <div 
+          className="flex gap-4 pb-4" 
+          style={{ 
+            minWidth: `${groupColumns.length * 300}px`,
+            width: 'max-content'
+          }}
+        >
           {groupColumns.map((column) => {
             const columnInvestigations = getInvestigationsByGroup(column.status);
             const isDragOver = dragOverColumn === column.status;
@@ -540,6 +530,11 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
                 className={`flex flex-col transition-all duration-200 ${
                   isDragOver ? 'transform scale-105' : ''
                 }`}
+                style={{ 
+                  width: '280px',
+                  minWidth: '280px',
+                  flexShrink: 0
+                }}
                 onDragOver={(e) => handleDragOver(e, column.status)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, column.status)}
@@ -548,7 +543,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
                   isDragOver ? 'border-blue-400 bg-blue-50' : ''
                 }`}>
                   <div className="flex items-center justify-between">
-                    <h4 className={`font-semibold ${column.color}`}>{column.title}</h4>
+                    <h4 className={`font-semibold ${column.color} truncate`}>{column.title}</h4>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm font-bold text-gray-700 bg-white rounded-full px-3 py-1 shadow-sm">
                         {columnInvestigations.length}
