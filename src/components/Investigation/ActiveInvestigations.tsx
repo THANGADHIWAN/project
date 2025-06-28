@@ -92,8 +92,9 @@ export function ActiveInvestigations({ onInvestigationClick }: ActiveInvestigati
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all');
   const [selectedInvestigations, setSelectedInvestigations] = useState<string[]>([]);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [investigations, setInvestigations] = useState<Investigation[]>(mockInvestigations);
 
-  const filteredInvestigations = mockInvestigations.filter(inv => {
+  const filteredInvestigations = investigations.filter(inv => {
     const matchesSearch = inv.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          inv.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          inv.assignedTo.toLowerCase().includes(searchTerm.toLowerCase());
@@ -102,6 +103,14 @@ export function ActiveInvestigations({ onInvestigationClick }: ActiveInvestigati
     
     return matchesSearch && matchesStatus && matchesPriority;
   });
+
+  const handleInvestigationUpdate = (id: string, updates: Partial<Investigation>) => {
+    setInvestigations(prev => 
+      prev.map(inv => 
+        inv.id === id ? { ...inv, ...updates, updatedAt: new Date().toISOString() } : inv
+      )
+    );
+  };
 
   const getDaysRemaining = (dueDate: string) => {
     const days = Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
@@ -273,6 +282,7 @@ export function ActiveInvestigations({ onInvestigationClick }: ActiveInvestigati
         <InvestigationKanbanView
           investigations={filteredInvestigations}
           onInvestigationClick={onInvestigationClick}
+          onInvestigationUpdate={handleInvestigationUpdate}
         />
       )}
 
