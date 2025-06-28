@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, User, Calendar, AlertTriangle, Clock, Settings, Filter, Plus, Edit } from 'lucide-react';
+import { MoreHorizontal, User, Calendar, AlertTriangle, Clock, Settings, Filter, Plus, Edit, Eye, Columns, Layout, Grid, List, ChevronDown, Save, RotateCcw } from 'lucide-react';
 import { StatusBadge } from '../Common/StatusBadge';
 import { ProgressBar } from '../Common/ProgressBar';
 import { Investigation, InvestigationStatus } from '../../types/investigation';
@@ -10,34 +10,109 @@ interface InvestigationKanbanViewProps {
   onInvestigationUpdate?: (id: string, updates: Partial<Investigation>) => void;
 }
 
-const statusColumns: { status: InvestigationStatus; title: string; color: string; bgColor: string }[] = [
-  { status: 'initiated', title: 'Initiated', color: 'text-gray-700', bgColor: 'bg-gray-100 border-gray-300' },
-  { status: 'in-progress', title: 'In Progress', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-300' },
-  { status: 'rca-pending', title: 'RCA Pending', color: 'text-yellow-700', bgColor: 'bg-yellow-100 border-yellow-300' },
-  { status: 'capa-pending', title: 'CAPA Pending', color: 'text-orange-700', bgColor: 'bg-orange-100 border-orange-300' },
-  { status: 'approval-pending', title: 'Approval Pending', color: 'text-purple-700', bgColor: 'bg-purple-100 border-purple-300' },
-  { status: 'completed', title: 'Completed', color: 'text-green-700', bgColor: 'bg-green-100 border-green-300' },
-  { status: 'closed', title: 'Closed', color: 'text-gray-700', bgColor: 'bg-gray-100 border-gray-300' }
+interface KanbanColumn {
+  status: InvestigationStatus;
+  title: string;
+  color: string;
+  bgColor: string;
+  visible: boolean;
+  order: number;
+}
+
+interface ViewSettings {
+  groupBy: 'status' | 'priority' | 'assignee' | 'department';
+  cardSize: 'compact' | 'normal' | 'detailed';
+  showProgress: boolean;
+  showDueDate: boolean;
+  showAssignee: boolean;
+  autoRefresh: boolean;
+  columnsPerRow: 3 | 4 | 5 | 6;
+}
+
+const defaultColumns: KanbanColumn[] = [
+  { status: 'initiated', title: 'New Investigations', color: 'text-blue-700', bgColor: 'bg-blue-50 border-blue-200', visible: true, order: 0 },
+  { status: 'in-progress', title: 'Under Investigation', color: 'text-indigo-700', bgColor: 'bg-indigo-50 border-indigo-200', visible: true, order: 1 },
+  { status: 'rca-pending', title: 'Root Cause Analysis', color: 'text-yellow-700', bgColor: 'bg-yellow-50 border-yellow-200', visible: true, order: 2 },
+  { status: 'capa-pending', title: 'CAPA Development', color: 'text-orange-700', bgColor: 'bg-orange-50 border-orange-200', visible: true, order: 3 },
+  { status: 'approval-pending', title: 'Pending Approval', color: 'text-purple-700', bgColor: 'bg-purple-50 border-purple-200', visible: true, order: 4 },
+  { status: 'completed', title: 'Completed', color: 'text-green-700', bgColor: 'bg-green-50 border-green-200', visible: true, order: 5 },
+  { status: 'closed', title: 'Closed', color: 'text-gray-700', bgColor: 'bg-gray-50 border-gray-200', visible: false, order: 6 }
+];
+
+const priorityColumns = [
+  { key: 'critical', title: 'Critical Priority', color: 'text-red-700', bgColor: 'bg-red-50 border-red-200' },
+  { key: 'high', title: 'High Priority', color: 'text-orange-700', bgColor: 'bg-orange-50 border-orange-200' },
+  { key: 'medium', title: 'Medium Priority', color: 'text-yellow-700', bgColor: 'bg-yellow-50 border-yellow-200' },
+  { key: 'low', title: 'Low Priority', color: 'text-green-700', bgColor: 'bg-green-50 border-green-200' }
+];
+
+const savedLayouts = [
+  { name: 'Default View', description: 'Standard investigation workflow' },
+  { name: 'Priority Focus', description: 'Grouped by priority levels' },
+  { name: 'Team View', description: 'Organized by assignee' },
+  { name: 'Compact View', description: 'Minimal card layout' },
+  { name: 'Detailed View', description: 'Full information cards' }
 ];
 
 export function InvestigationKanbanView({ investigations, onInvestigationClick, onInvestigationUpdate }: InvestigationKanbanViewProps) {
   const [draggedItem, setDraggedItem] = useState<Investigation | null>(null);
-  const [dragOverColumn, setDragOverColumn] = useState<InvestigationStatus | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [localInvestigations, setLocalInvestigations] = useState<Investigation[]>(investigations);
-  const [showColumnSettings, setShowColumnSettings] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState<InvestigationStatus[]>(
-    statusColumns.map(col => col.status)
-  );
-  const [columnOrder, setColumnOrder] = useState<InvestigationStatus[]>(
-    statusColumns.map(col => col.status)
-  );
+  const [columns, setColumns] = useState<KanbanColumn[]>(defaultColumns);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showLayoutSelector, setShowLayoutSelector] = useState(false);
+  const [editingColumn, setEditingColumn] = useState<string | null>(null);
+  const [newColumnTitle, setNewColumnTitle] = useState('');
+  
+  const [viewSettings, setViewSettings] = useState<ViewSettings>({
+    groupBy: 'status',
+    cardSize: 'normal',
+    showProgress: true,
+    showDueDate: true,
+    showAssignee: true,
+    autoRefresh: false,
+    columnsPerRow: 4
+  });
 
   React.useEffect(() => {
     setLocalInvestigations(investigations);
   }, [investigations]);
 
-  const getInvestigationsByStatus = (status: InvestigationStatus) => {
-    return localInvestigations.filter(inv => inv.status === status);
+  const getInvestigationsByGroup = (groupKey: string) => {
+    if (viewSettings.groupBy === 'status') {
+      return localInvestigations.filter(inv => inv.status === groupKey);
+    } else if (viewSettings.groupBy === 'priority') {
+      return localInvestigations.filter(inv => inv.priority === groupKey);
+    } else if (viewSettings.groupBy === 'assignee') {
+      return localInvestigations.filter(inv => inv.assignedTo === groupKey);
+    }
+    return [];
+  };
+
+  const getGroupColumns = () => {
+    if (viewSettings.groupBy === 'status') {
+      return columns.filter(col => col.visible).sort((a, b) => a.order - b.order);
+    } else if (viewSettings.groupBy === 'priority') {
+      return priorityColumns.map(col => ({
+        status: col.key as InvestigationStatus,
+        title: col.title,
+        color: col.color,
+        bgColor: col.bgColor,
+        visible: true,
+        order: 0
+      }));
+    } else if (viewSettings.groupBy === 'assignee') {
+      const assignees = [...new Set(localInvestigations.map(inv => inv.assignedTo))];
+      return assignees.map((assignee, index) => ({
+        status: assignee as InvestigationStatus,
+        title: assignee,
+        color: 'text-blue-700',
+        bgColor: 'bg-blue-50 border-blue-200',
+        visible: true,
+        order: index
+      }));
+    }
+    return [];
   };
 
   const getDaysRemaining = (dueDate: string) => {
@@ -50,46 +125,52 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', investigation.id);
     
-    // Add visual feedback
     const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
-    dragImage.style.transform = 'rotate(5deg)';
+    dragImage.style.transform = 'rotate(3deg)';
     dragImage.style.opacity = '0.8';
+    dragImage.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)';
     e.dataTransfer.setDragImage(dragImage, 0, 0);
   };
 
-  const handleDragOver = (e: React.DragEvent, targetStatus: InvestigationStatus) => {
+  const handleDragOver = (e: React.DragEvent, targetGroup: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    setDragOverColumn(targetStatus);
+    setDragOverColumn(targetGroup);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    // Only clear if we're leaving the column entirely
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setDragOverColumn(null);
     }
   };
 
-  const handleDrop = (e: React.DragEvent, targetStatus: InvestigationStatus) => {
+  const handleDrop = (e: React.DragEvent, targetGroup: string) => {
     e.preventDefault();
     setDragOverColumn(null);
     
-    if (draggedItem && draggedItem.status !== targetStatus) {
-      // Update the investigation status
-      const updatedInvestigation = { ...draggedItem, status: targetStatus };
+    if (draggedItem) {
+      let updates: Partial<Investigation> = {};
       
-      // Update local state immediately for smooth UX
-      setLocalInvestigations(prev => 
-        prev.map(inv => 
-          inv.id === draggedItem.id ? updatedInvestigation : inv
-        )
-      );
+      if (viewSettings.groupBy === 'status' && draggedItem.status !== targetGroup) {
+        updates.status = targetGroup as InvestigationStatus;
+      } else if (viewSettings.groupBy === 'priority' && draggedItem.priority !== targetGroup) {
+        updates.priority = targetGroup as any;
+      } else if (viewSettings.groupBy === 'assignee' && draggedItem.assignedTo !== targetGroup) {
+        updates.assignedTo = targetGroup;
+      }
       
-      // Call the update callback if provided
-      onInvestigationUpdate?.(draggedItem.id, { status: targetStatus });
-      
-      // Log the change for debugging
-      console.log(`Investigation ${draggedItem.id} moved from ${draggedItem.status} to ${targetStatus}`);
+      if (Object.keys(updates).length > 0) {
+        const updatedInvestigation = { ...draggedItem, ...updates };
+        
+        setLocalInvestigations(prev => 
+          prev.map(inv => 
+            inv.id === draggedItem.id ? updatedInvestigation : inv
+          )
+        );
+        
+        onInvestigationUpdate?.(draggedItem.id, updates);
+        console.log(`Investigation ${draggedItem.id} updated:`, updates);
+      }
     }
     
     setDraggedItem(null);
@@ -101,18 +182,53 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
   };
 
   const toggleColumnVisibility = (status: InvestigationStatus) => {
-    setVisibleColumns(prev => 
-      prev.includes(status) 
-        ? prev.filter(s => s !== status)
-        : [...prev, status]
-    );
+    setColumns(prev => prev.map(col => 
+      col.status === status ? { ...col, visible: !col.visible } : col
+    ));
+  };
+
+  const updateColumnTitle = (status: InvestigationStatus, newTitle: string) => {
+    setColumns(prev => prev.map(col => 
+      col.status === status ? { ...col, title: newTitle } : col
+    ));
+    setEditingColumn(null);
+    setNewColumnTitle('');
   };
 
   const reorderColumns = (fromIndex: number, toIndex: number) => {
-    const newOrder = [...columnOrder];
-    const [removed] = newOrder.splice(fromIndex, 1);
-    newOrder.splice(toIndex, 0, removed);
-    setColumnOrder(newOrder);
+    setColumns(prev => {
+      const newColumns = [...prev];
+      const [removed] = newColumns.splice(fromIndex, 1);
+      newColumns.splice(toIndex, 0, removed);
+      return newColumns.map((col, index) => ({ ...col, order: index }));
+    });
+  };
+
+  const saveCurrentLayout = () => {
+    const layoutName = prompt('Enter layout name:');
+    if (layoutName) {
+      console.log('Saving layout:', layoutName, { columns, viewSettings });
+      // Here you would save to localStorage or backend
+    }
+  };
+
+  const loadLayout = (layoutName: string) => {
+    console.log('Loading layout:', layoutName);
+    // Here you would load from localStorage or backend
+    setShowLayoutSelector(false);
+  };
+
+  const resetToDefault = () => {
+    setColumns(defaultColumns);
+    setViewSettings({
+      groupBy: 'status',
+      cardSize: 'normal',
+      showProgress: true,
+      showDueDate: true,
+      showAssignee: true,
+      autoRefresh: false,
+      columnsPerRow: 4
+    });
   };
 
   const InvestigationCard = ({ investigation }: { investigation: Investigation }) => {
@@ -120,18 +236,24 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
     const isOverdue = daysRemaining < 0;
     const isDragging = draggedItem?.id === investigation.id;
 
+    const cardSizeClasses = {
+      compact: 'p-3 mb-2',
+      normal: 'p-4 mb-3',
+      detailed: 'p-5 mb-4'
+    };
+
     return (
       <div
         draggable
         onDragStart={(e) => handleDragStart(e, investigation)}
         onDragEnd={handleDragEnd}
-        className={`bg-white rounded-lg border-2 p-4 mb-3 shadow-sm hover:shadow-md transition-all cursor-move select-none ${
+        className={`bg-white rounded-lg border-2 shadow-sm hover:shadow-md transition-all cursor-move select-none ${
           isDragging 
-            ? 'opacity-50 border-blue-400 transform rotate-2' 
+            ? 'opacity-50 border-blue-400 transform rotate-2 scale-105' 
             : 'border-gray-200 hover:border-blue-300'
-        }`}
+        } ${cardSizeClasses[viewSettings.cardSize]}`}
       >
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between mb-2">
           <button
             onClick={() => onInvestigationClick?.(investigation.id)}
             className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
@@ -139,8 +261,12 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
             {investigation.id}
           </button>
           <div className="flex items-center space-x-1">
-            <button className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100">
-              <Edit className="h-3 w-3" />
+            <button 
+              onClick={() => onInvestigationClick?.(investigation.id)}
+              className="text-gray-400 hover:text-blue-600 p-1 rounded hover:bg-blue-50"
+              title="View Details"
+            >
+              <Eye className="h-3 w-3" />
             </button>
             <button className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100">
               <MoreHorizontal className="h-3 w-3" />
@@ -148,44 +274,54 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
           </div>
         </div>
         
-        <h4 className="text-sm font-medium text-gray-900 mb-3 line-clamp-2 leading-tight">
+        <h4 className={`font-medium text-gray-900 mb-2 line-clamp-2 leading-tight ${
+          viewSettings.cardSize === 'compact' ? 'text-xs' : 'text-sm'
+        }`}>
           {investigation.title}
         </h4>
         
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <StatusBadge status={investigation.priority} type="priority" />
-          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-            {investigation.currentStep}
-          </span>
+          {viewSettings.cardSize !== 'compact' && (
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              {investigation.currentStep}
+            </span>
+          )}
         </div>
         
-        <div className="mb-3">
-          <div className="flex justify-between text-xs text-gray-600 mb-1">
-            <span>Progress</span>
-            <span className="font-medium">{investigation.completionPercentage}%</span>
+        {viewSettings.showProgress && (
+          <div className="mb-2">
+            <div className="flex justify-between text-xs text-gray-600 mb-1">
+              <span>Progress</span>
+              <span className="font-medium">{investigation.completionPercentage}%</span>
+            </div>
+            <ProgressBar 
+              progress={investigation.completionPercentage} 
+              size="sm" 
+              showPercentage={false}
+              color={investigation.completionPercentage >= 75 ? 'green' : investigation.completionPercentage >= 50 ? 'blue' : 'yellow'}
+            />
           </div>
-          <ProgressBar 
-            progress={investigation.completionPercentage} 
-            size="sm" 
-            showPercentage={false}
-            color={investigation.completionPercentage >= 75 ? 'green' : investigation.completionPercentage >= 50 ? 'blue' : 'yellow'}
-          />
-        </div>
+        )}
         
         <div className="flex items-center justify-between text-xs text-gray-500">
-          <div className="flex items-center space-x-1">
-            <User className="h-3 w-3" />
-            <span className="truncate max-w-20">{investigation.assignedTo}</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <Calendar className="h-3 w-3" />
-            <span className={`font-medium ${isOverdue ? 'text-red-600' : daysRemaining <= 3 ? 'text-orange-600' : ''}`}>
-              {isOverdue ? 'Overdue' : `${daysRemaining}d`}
-            </span>
-          </div>
+          {viewSettings.showAssignee && (
+            <div className="flex items-center space-x-1">
+              <User className="h-3 w-3" />
+              <span className="truncate max-w-20">{investigation.assignedTo}</span>
+            </div>
+          )}
+          {viewSettings.showDueDate && (
+            <div className="flex items-center space-x-1">
+              <Calendar className="h-3 w-3" />
+              <span className={`font-medium ${isOverdue ? 'text-red-600' : daysRemaining <= 3 ? 'text-orange-600' : ''}`}>
+                {isOverdue ? 'Overdue' : `${daysRemaining}d`}
+              </span>
+            </div>
+          )}
         </div>
         
-        {isOverdue && (
+        {isOverdue && viewSettings.cardSize !== 'compact' && (
           <div className="mt-2 flex items-center space-x-1 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
             <AlertTriangle className="h-3 w-3" />
             <span className="font-medium">{Math.abs(daysRemaining)} days overdue</span>
@@ -195,27 +331,78 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
     );
   };
 
-  const orderedColumns = columnOrder
-    .filter(status => visibleColumns.includes(status))
-    .map(status => statusColumns.find(col => col.status === status)!)
-    .filter(Boolean);
+  const groupColumns = getGroupColumns();
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Investigation Board</h3>
-          <p className="text-sm text-gray-600">Drag cards between columns to update status</p>
+          <p className="text-sm text-gray-600">
+            {viewSettings.groupBy === 'status' ? 'Drag cards between columns to update status' :
+             viewSettings.groupBy === 'priority' ? 'Organized by priority levels' :
+             'Grouped by team members'}
+          </p>
         </div>
         
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <Clock className="h-4 w-4" />
-            <span>Live Updates</span>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Group By Selector */}
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">Group by:</label>
+            <select
+              value={viewSettings.groupBy}
+              onChange={(e) => setViewSettings(prev => ({ ...prev, groupBy: e.target.value as any }))}
+              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="status">Status</option>
+              <option value="priority">Priority</option>
+              <option value="assignee">Assignee</option>
+            </select>
+          </div>
+
+          {/* Layout Selector */}
+          <div className="relative">
+            <button
+              onClick={() => setShowLayoutSelector(!showLayoutSelector)}
+              className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+            >
+              <Layout className="h-4 w-4" />
+              <span>Layouts</span>
+              <ChevronDown className="h-3 w-3" />
+            </button>
+            
+            {showLayoutSelector && (
+              <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                <div className="p-3 border-b border-gray-200">
+                  <h4 className="font-medium text-gray-900">Saved Layouts</h4>
+                </div>
+                <div className="p-2">
+                  {savedLayouts.map((layout) => (
+                    <button
+                      key={layout.name}
+                      onClick={() => loadLayout(layout.name)}
+                      className="w-full text-left p-2 hover:bg-gray-50 rounded text-sm"
+                    >
+                      <div className="font-medium text-gray-900">{layout.name}</div>
+                      <div className="text-xs text-gray-500">{layout.description}</div>
+                    </button>
+                  ))}
+                </div>
+                <div className="p-2 border-t border-gray-200">
+                  <button
+                    onClick={saveCurrentLayout}
+                    className="w-full flex items-center space-x-2 p-2 text-blue-600 hover:bg-blue-50 rounded text-sm"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>Save Current Layout</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           
           <button
-            onClick={() => setShowColumnSettings(!showColumnSettings)}
+            onClick={() => setShowSettings(!showSettings)}
             className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
           >
             <Settings className="h-4 w-4" />
@@ -224,36 +411,166 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
         </div>
       </div>
 
-      {/* Column Settings */}
-      {showColumnSettings && (
+      {/* Settings Panel */}
+      {showSettings && (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <h4 className="text-sm font-medium text-gray-900 mb-3">Column Settings</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {statusColumns.map((column) => (
-              <label key={column.status} className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.includes(column.status)}
-                  onChange={() => toggleColumnVisibility(column.status)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700">{column.title}</span>
-              </label>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* View Settings */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">View Settings</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm text-gray-700">Card Size:</label>
+                  <select
+                    value={viewSettings.cardSize}
+                    onChange={(e) => setViewSettings(prev => ({ ...prev, cardSize: e.target.value as any }))}
+                    className="w-full mt-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                  >
+                    <option value="compact">Compact</option>
+                    <option value="normal">Normal</option>
+                    <option value="detailed">Detailed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-700">Columns per Row:</label>
+                  <select
+                    value={viewSettings.columnsPerRow}
+                    onChange={(e) => setViewSettings(prev => ({ ...prev, columnsPerRow: Number(e.target.value) as any }))}
+                    className="w-full mt-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                  >
+                    <option value={3}>3 Columns</option>
+                    <option value={4}>4 Columns</option>
+                    <option value={5}>5 Columns</option>
+                    <option value={6}>6 Columns</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Card Content */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Card Content</h4>
+              <div className="space-y-2">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={viewSettings.showProgress}
+                    onChange={(e) => setViewSettings(prev => ({ ...prev, showProgress: e.target.checked }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Show Progress Bar</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={viewSettings.showDueDate}
+                    onChange={(e) => setViewSettings(prev => ({ ...prev, showDueDate: e.target.checked }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Show Due Date</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={viewSettings.showAssignee}
+                    onChange={(e) => setViewSettings(prev => ({ ...prev, showAssignee: e.target.checked }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Show Assignee</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={viewSettings.autoRefresh}
+                    onChange={(e) => setViewSettings(prev => ({ ...prev, autoRefresh: e.target.checked }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Auto Refresh</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Column Management */}
+            {viewSettings.groupBy === 'status' && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Column Management</h4>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {columns.map((column) => (
+                    <div key={column.status} className="flex items-center justify-between">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={column.visible}
+                          onChange={() => toggleColumnVisibility(column.status)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm text-gray-700">{column.title}</span>
+                      </label>
+                      <button
+                        onClick={() => {
+                          setEditingColumn(column.status);
+                          setNewColumnTitle(column.title);
+                        }}
+                        className="text-gray-400 hover:text-gray-600 p-1"
+                      >
+                        <Edit className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={resetToDefault}
+                  className="mt-3 flex items-center space-x-1 text-xs text-gray-600 hover:text-gray-800"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  <span>Reset to Default</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Column Title Editor */}
+      {editingColumn && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Column Title</h3>
+            <input
+              type="text"
+              value={newColumnTitle}
+              onChange={(e) => setNewColumnTitle(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter column title"
+            />
+            <div className="flex justify-end space-x-3 mt-4">
+              <button
+                onClick={() => setEditingColumn(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => updateColumnTitle(editingColumn as InvestigationStatus, newColumnTitle)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Save
+              </button>
+            </div>
           </div>
         </div>
       )}
       
       <div className="overflow-x-auto">
-        <div className="flex space-x-4 min-w-max pb-4">
-          {orderedColumns.map((column) => {
-            const columnInvestigations = getInvestigationsByStatus(column.status);
+        <div className={`grid gap-4 min-w-max pb-4`} style={{ gridTemplateColumns: `repeat(${Math.min(groupColumns.length, viewSettings.columnsPerRow)}, minmax(280px, 1fr))` }}>
+          {groupColumns.map((column) => {
+            const columnInvestigations = getInvestigationsByGroup(column.status);
             const isDragOver = dragOverColumn === column.status;
             
             return (
               <div
                 key={column.status}
-                className={`flex flex-col w-80 flex-shrink-0 transition-all duration-200 ${
+                className={`flex flex-col transition-all duration-200 ${
                   isDragOver ? 'transform scale-105' : ''
                 }`}
                 onDragOver={(e) => handleDragOver(e, column.status)}
@@ -275,7 +592,6 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
                     </div>
                   </div>
                   
-                  {/* Column Stats */}
                   <div className="mt-2 flex items-center space-x-4 text-xs text-gray-600">
                     <span>
                       Overdue: {columnInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
@@ -286,7 +602,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
                   </div>
                 </div>
                 
-                <div className={`flex-1 min-h-[500px] transition-all duration-200 ${
+                <div className={`flex-1 min-h-[400px] transition-all duration-200 ${
                   isDragOver ? 'bg-blue-50/50 rounded-lg border-2 border-dashed border-blue-300' : ''
                 }`}>
                   {columnInvestigations.map((investigation) => (
@@ -300,7 +616,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
                     <div className={`text-center text-gray-400 text-sm mt-8 p-8 border-2 border-dashed border-gray-200 rounded-lg transition-all duration-200 ${
                       isDragOver ? 'border-blue-300 bg-blue-50 text-blue-600' : ''
                     }`}>
-                      {isDragOver ? 'Drop here to update status' : 'No investigations'}
+                      {isDragOver ? 'Drop here to update' : 'No investigations'}
                     </div>
                   )}
                 </div>
@@ -331,7 +647,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
           </div>
           <div>
             <div className="text-2xl font-bold text-green-600">
-              {Math.round(localInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / localInvestigations.length)}%
+              {localInvestigations.length > 0 ? Math.round(localInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / localInvestigations.length) : 0}%
             </div>
             <div className="text-sm text-gray-600">Avg Progress</div>
           </div>
