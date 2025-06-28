@@ -12,10 +12,10 @@ const modules = [
 
 export function LeftSidebar({ activeModule, onModuleChange }: LeftSidebarProps) {
   return (
-    <div className="w-20 bg-gray-900 text-white h-screen flex flex-col">
-      <div className="p-4 border-b border-gray-700">
+    <div className="w-20 bg-slate-900 text-white h-screen flex flex-col">
+      <div className="p-4 border-b border-slate-700">
         <div className="flex items-center justify-center">
-          <Shield className="h-8 w-8 text-gray-400" />
+          <Shield className="h-8 w-8 text-blue-400" />
         </div>
       </div>
       
@@ -31,8 +31,8 @@ export function LeftSidebar({ activeModule, onModuleChange }: LeftSidebarProps) 
                   onClick={() => onModuleChange(module.id)}
                   className={`w-full flex flex-col items-center space-y-1 px-2 py-3 rounded-lg text-xs font-medium transition-colors ${
                     isActive
-                      ? 'bg-gray-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                   title={module.label}
                 >
