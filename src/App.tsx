@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { InvestigationProvider } from './contexts/InvestigationContext';
-import { Sidebar } from './components/layout/Sidebar';
+import { LeftSidebar } from './components/layout/LeftSidebar';
+import { TopNavigation } from './components/layout/TopNavigation';
 import { Header } from './components/layout/Header';
 import { DashboardView } from './components/Dashboard/DashboardView';
 import { TriggerInvestigation } from './components/Investigation/TriggerInvestigation';
@@ -16,6 +17,7 @@ import { ReportViewer } from './components/Investigation/ReportViewer';
 import { AuditTrail } from './components/Investigation/AuditTrail';
 
 function App() {
+  const [activeModule, setActiveModule] = useState('investigation');
   const [currentSection, setCurrentSection] = useState('dashboard');
   const [selectedInvestigationId, setSelectedInvestigationId] = useState<string | null>(null);
   const [selectedSOPId, setSelectedSOPId] = useState<string | null>(null);
@@ -28,7 +30,7 @@ function App() {
     
     switch (section) {
       case 'dashboard':
-        return 'Investigation Dashboard';
+        return 'Dashboard';
       case 'investigations':
         return 'Active Investigations';
       case 'trigger':
@@ -147,21 +149,26 @@ function App() {
   
   return (
     <InvestigationProvider>
-      <div className="flex h-screen bg-gray-100">
-        <Sidebar 
-          currentSection={currentSection} 
-          onSectionChange={(section) => {
-            setCurrentSection(section);
-            setSelectedInvestigationId(null);
-            setSelectedSOPId(null);
-            setSelectedReportId(null);
-          }} 
+      <div className="flex h-screen bg-gray-50">
+        <LeftSidebar 
+          activeModule={activeModule}
+          onModuleChange={setActiveModule}
         />
         
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header 
             title={getSectionTitle(currentSection)}
             subtitle={getSectionSubtitle(currentSection)}
+          />
+          
+          <TopNavigation
+            currentSection={currentSection}
+            onSectionChange={(section) => {
+              setCurrentSection(section);
+              setSelectedInvestigationId(null);
+              setSelectedSOPId(null);
+              setSelectedReportId(null);
+            }}
           />
           
           <main className="flex-1 overflow-auto bg-gray-50">
