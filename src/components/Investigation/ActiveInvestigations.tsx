@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Search, Filter, Download, Eye, Edit, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Search, Filter, Download, Eye, Edit, Clock, AlertTriangle, CheckCircle, Grid3X3, BarChart3, Table, Kanban } from 'lucide-react';
 import { StatusBadge } from '../Common/StatusBadge';
 import { ProgressBar } from '../Common/ProgressBar';
 import { AdvancedFilters } from './AdvancedFilters';
+import { InvestigationTableView } from './InvestigationTableView';
+import { InvestigationKanbanView } from './InvestigationKanbanView';
+import { InvestigationAnalyticsView } from './InvestigationAnalyticsView';
 import { Investigation, Priority, InvestigationStatus } from '../../types/investigation';
 
 interface ActiveInvestigationsProps {
@@ -83,6 +86,7 @@ const mockInvestigations: Investigation[] = [
 ];
 
 export function ActiveInvestigations({ onInvestigationClick }: ActiveInvestigationsProps) {
+  const [currentView, setCurrentView] = useState<'table' | 'kanban' | 'analytics'>('table');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<InvestigationStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all');
@@ -99,37 +103,6 @@ export function ActiveInvestigations({ onInvestigationClick }: ActiveInvestigati
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
-  const handleSelectAll = () => {
-    if (selectedInvestigations.length === filteredInvestigations.length) {
-      setSelectedInvestigations([]);
-    } else {
-      setSelectedInvestigations(filteredInvestigations.map(inv => inv.id));
-    }
-  };
-
-  const handleSelectInvestigation = (id: string) => {
-    setSelectedInvestigations(prev => 
-      prev.includes(id) 
-        ? prev.filter(invId => invId !== id)
-        : [...prev, id]
-    );
-  };
-
-  const getStatusIcon = (status: InvestigationStatus) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'in-progress':
-      case 'rca-pending':
-      case 'capa-pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      case 'approval-pending':
-        return <AlertTriangle className="h-4 w-4 text-orange-600" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-600" />;
-    }
-  };
-
   const getDaysRemaining = (dueDate: string) => {
     const days = Math.ceil((new Date(dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     return days;
@@ -137,238 +110,177 @@ export function ActiveInvestigations({ onInvestigationClick }: ActiveInvestigati
 
   const handleAdvancedFilters = (filters: any) => {
     console.log('Applied advanced filters:', filters);
-    // Implement advanced filtering logic here
   };
+
+  const viewButtons = [
+    { id: 'table', label: 'Table', icon: Table },
+    { id: 'kanban', label: 'Kanban', icon: Kanban },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 }
+  ];
 
   return (
     <div className="space-y-6">
-      {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Search investigations..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+      {/* Header */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Investigations</h2>
+            <p className="text-sm text-gray-600 mt-1">Manage and track all investigation activities</p>
           </div>
           
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as InvestigationStatus | 'all')}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Status</option>
-            <option value="initiated">Initiated</option>
-            <option value="in-progress">In Progress</option>
-            <option value="rca-pending">RCA Pending</option>
-            <option value="capa-pending">CAPA Pending</option>
-            <option value="approval-pending">Approval Pending</option>
-            <option value="completed">Completed</option>
-            <option value="closed">Closed</option>
-          </select>
-          
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value as Priority | 'all')}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Priority</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="critical">Critical</option>
-          </select>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          {selectedInvestigations.length > 0 && (
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
-              <Download className="h-4 w-4" />
-              <span>Export Selected</span>
-            </button>
-          )}
-          <button
-            onClick={() => setShowAdvancedFilters(true)}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
-          >
-            <Filter className="h-4 w-4" />
-            <span>Advanced Filter</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Active</p>
-              <p className="text-2xl font-bold text-gray-900">{filteredInvestigations.filter(inv => inv.status !== 'completed' && inv.status !== 'closed').length}</p>
-            </div>
-            <Clock className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Overdue</p>
-              <p className="text-2xl font-bold text-red-600">{filteredInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}</p>
-            </div>
-            <AlertTriangle className="h-8 w-8 text-red-600" />
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Critical Priority</p>
-              <p className="text-2xl font-bold text-orange-600">{filteredInvestigations.filter(inv => inv.priority === 'critical').length}</p>
-            </div>
-            <AlertTriangle className="h-8 w-8 text-orange-600" />
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-green-600">{filteredInvestigations.filter(inv => inv.status === 'completed').length}</p>
-            </div>
-            <CheckCircle className="h-8 w-8 text-green-600" />
+          {/* View Toggle */}
+          <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+            {viewButtons.map((view) => {
+              const Icon = view.icon;
+              return (
+                <button
+                  key={view.id}
+                  onClick={() => setCurrentView(view.id as any)}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    currentView === view.id
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{view.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Investigations Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Investigations ({filteredInvestigations.length})
-            </h3>
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={selectedInvestigations.length === filteredInvestigations.length && filteredInvestigations.length > 0}
-                onChange={handleSelectAll}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-600">Select All</span>
-            </label>
+      {/* Filters - Only show for table and kanban views */}
+      {currentView !== 'analytics' && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Search investigations..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as InvestigationStatus | 'all')}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Status</option>
+                <option value="initiated">Initiated</option>
+                <option value="in-progress">In Progress</option>
+                <option value="rca-pending">RCA Pending</option>
+                <option value="capa-pending">CAPA Pending</option>
+                <option value="approval-pending">Approval Pending</option>
+                <option value="completed">Completed</option>
+                <option value="closed">Closed</option>
+              </select>
+              
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value as Priority | 'all')}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Priority</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {selectedInvestigations.length > 0 && (
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
+                  <Download className="h-4 w-4" />
+                  <span>Export Selected</span>
+                </button>
+              )}
+              <button
+                onClick={() => setShowAdvancedFilters(true)}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
+              >
+                <Filter className="h-4 w-4" />
+                <span>Advanced Filter</span>
+              </button>
+            </div>
           </div>
         </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Investigation
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Priority
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Assigned To
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Progress
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Due Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredInvestigations.map((investigation) => {
-                const daysRemaining = getDaysRemaining(investigation.dueDate);
-                const isOverdue = daysRemaining < 0;
-                
-                return (
-                  <tr key={investigation.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedInvestigations.includes(investigation.id)}
-                          onChange={() => handleSelectInvestigation(investigation.id)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-3"
-                        />
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            {getStatusIcon(investigation.status)}
-                            <button
-                              onClick={() => onInvestigationClick?.(investigation.id)}
-                              className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                            >
-                              {investigation.id}
-                            </button>
-                          </div>
-                          <div className="text-sm text-gray-600 mt-1">{investigation.title}</div>
-                          <div className="text-xs text-gray-500 mt-1">Current: {investigation.currentStep}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={investigation.status} type="investigation" />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={investigation.priority} type="priority" />
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {investigation.assignedTo}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="w-24">
-                        <ProgressBar 
-                          progress={investigation.completionPercentage} 
-                          size="sm" 
-                          showPercentage={false}
-                          color={investigation.completionPercentage >= 75 ? 'green' : investigation.completionPercentage >= 50 ? 'blue' : 'yellow'}
-                        />
-                        <div className="text-xs text-gray-500 mt-1">{investigation.completionPercentage}%</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {new Date(investigation.dueDate).toLocaleDateString()}
-                      </div>
-                      <div className={`text-xs ${isOverdue ? 'text-red-600' : daysRemaining <= 3 ? 'text-orange-600' : 'text-gray-500'}`}>
-                        {isOverdue ? `${Math.abs(daysRemaining)} days overdue` : `${daysRemaining} days remaining`}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => onInvestigationClick?.(investigation.id)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="text-gray-600 hover:text-gray-900">
-                          <Edit className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      )}
+
+      {/* Summary Cards - Only show for table and kanban views */}
+      {currentView !== 'analytics' && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total Active</p>
+                <p className="text-2xl font-bold text-gray-900">{filteredInvestigations.filter(inv => inv.status !== 'completed' && inv.status !== 'closed').length}</p>
+              </div>
+              <Clock className="h-8 w-8 text-blue-600" />
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Overdue</p>
+                <p className="text-2xl font-bold text-red-600">{filteredInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Critical Priority</p>
+                <p className="text-2xl font-bold text-orange-600">{filteredInvestigations.filter(inv => inv.priority === 'critical').length}</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-orange-600" />
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Completed</p>
+                <p className="text-2xl font-bold text-green-600">{filteredInvestigations.filter(inv => inv.status === 'completed').length}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* View Content */}
+      {currentView === 'table' && (
+        <InvestigationTableView
+          investigations={filteredInvestigations}
+          selectedInvestigations={selectedInvestigations}
+          onSelectionChange={setSelectedInvestigations}
+          onInvestigationClick={onInvestigationClick}
+        />
+      )}
+
+      {currentView === 'kanban' && (
+        <InvestigationKanbanView
+          investigations={filteredInvestigations}
+          onInvestigationClick={onInvestigationClick}
+        />
+      )}
+
+      {currentView === 'analytics' && (
+        <InvestigationAnalyticsView
+          investigations={filteredInvestigations}
+        />
+      )}
 
       {/* Advanced Filters Modal */}
       <AdvancedFilters
