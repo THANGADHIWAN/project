@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, User, Calendar, AlertTriangle, Clock, Filter, Plus, Edit, Eye, Search, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, User, Calendar, AlertTriangle, Clock, Plus, Edit, Eye, Search } from 'lucide-react';
 import { StatusBadge } from '../Common/StatusBadge';
 import { ProgressBar } from '../Common/ProgressBar';
 import { Investigation, InvestigationStatus } from '../../types/investigation';
@@ -21,7 +21,6 @@ interface KanbanColumn {
 
 interface ViewSettings {
   groupBy: 'status' | 'priority' | 'assignee';
-  cardSize: 'compact' | 'normal' | 'detailed';
   showProgress: boolean;
   showDueDate: boolean;
   showAssignee: boolean;
@@ -35,7 +34,7 @@ const defaultColumns: KanbanColumn[] = [
   { status: 'capa-pending', title: 'CAPA Development', color: 'text-orange-700', bgColor: 'bg-orange-50 border-orange-200', visible: true, order: 3 },
   { status: 'approval-pending', title: 'Pending Approval', color: 'text-purple-700', bgColor: 'bg-purple-50 border-purple-200', visible: true, order: 4 },
   { status: 'completed', title: 'Completed', color: 'text-green-700', bgColor: 'bg-green-50 border-green-200', visible: true, order: 5 },
-  { status: 'closed', title: 'Closed', color: 'text-gray-700', bgColor: 'bg-gray-50 border-gray-200', visible: false, order: 6 }
+  { status: 'closed', title: 'Closed', color: 'text-gray-700', bgColor: 'bg-gray-50 border-gray-200', visible: true, order: 6 }
 ];
 
 const priorityColumns = [
@@ -51,13 +50,11 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
   const [localInvestigations, setLocalInvestigations] = useState<Investigation[]>(investigations);
   const [columns, setColumns] = useState<KanbanColumn[]>(defaultColumns);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
   const [newColumnTitle, setNewColumnTitle] = useState('');
   
   const [viewSettings, setViewSettings] = useState<ViewSettings>({
     groupBy: 'status',
-    cardSize: 'normal',
     showProgress: true,
     showDueDate: true,
     showAssignee: true,
@@ -218,22 +215,16 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
     const isOverdue = daysRemaining < 0;
     const isDragging = draggedItem?.id === investigation.id;
 
-    const cardSizeClasses = {
-      compact: 'p-3 mb-2',
-      normal: 'p-4 mb-3',
-      detailed: 'p-5 mb-4'
-    };
-
     return (
       <div
         draggable
         onDragStart={(e) => handleDragStart(e, investigation)}
         onDragEnd={handleDragEnd}
-        className={`bg-white rounded-lg border-2 shadow-sm hover:shadow-md transition-all cursor-move select-none ${
+        className={`bg-white rounded-lg border-2 shadow-sm hover:shadow-md transition-all cursor-move select-none p-4 mb-3 ${
           isDragging 
             ? 'opacity-50 border-blue-400 transform rotate-2 scale-105' 
             : 'border-gray-200 hover:border-blue-300'
-        } ${cardSizeClasses[viewSettings.cardSize]}`}
+        }`}
       >
         <div className="flex items-start justify-between mb-2">
           <button
@@ -256,19 +247,15 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
           </div>
         </div>
         
-        <h4 className={`font-medium text-gray-900 mb-2 line-clamp-2 leading-tight ${
-          viewSettings.cardSize === 'compact' ? 'text-xs' : 'text-sm'
-        }`}>
+        <h4 className="font-medium text-gray-900 mb-2 line-clamp-2 leading-tight text-sm">
           {investigation.title}
         </h4>
         
         <div className="flex items-center justify-between mb-2">
           <StatusBadge status={investigation.priority} type="priority" />
-          {viewSettings.cardSize !== 'compact' && (
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              {investigation.currentStep}
-            </span>
-          )}
+          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+            {investigation.currentStep}
+          </span>
         </div>
         
         {viewSettings.showProgress && (
@@ -303,7 +290,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
           )}
         </div>
         
-        {isOverdue && viewSettings.cardSize !== 'compact' && (
+        {isOverdue && (
           <div className="mt-2 flex items-center space-x-1 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
             <AlertTriangle className="h-3 w-3" />
             <span className="font-medium">{Math.abs(daysRemaining)} days overdue</span>
@@ -317,7 +304,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      {/* Search and Filters */}
+      {/* Search and Group By Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div className="flex items-center space-x-4">
           <div className="relative">
@@ -330,14 +317,6 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          
-          <button
-            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
-          >
-            <Filter className="h-4 w-4" />
-            <span>Advanced Filter</span>
-          </button>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
@@ -347,7 +326,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
             <select
               value={viewSettings.groupBy}
               onChange={(e) => setViewSettings(prev => ({ ...prev, groupBy: e.target.value as any }))}
-              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
             >
               <option value="status">Status</option>
               <option value="priority">Priority</option>
@@ -355,128 +334,66 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
             </select>
           </div>
 
-          {/* Card Size */}
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700">Card Size:</label>
-            <select
-              value={viewSettings.cardSize}
-              onChange={(e) => setViewSettings(prev => ({ ...prev, cardSize: e.target.value as any }))}
-              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="compact">Compact</option>
-              <option value="normal">Normal</option>
-              <option value="detailed">Detailed</option>
-            </select>
+          {/* View Options */}
+          <div className="flex items-center space-x-4">
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={viewSettings.showProgress}
+                onChange={(e) => setViewSettings(prev => ({ ...prev, showProgress: e.target.checked }))}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Progress</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={viewSettings.showDueDate}
+                onChange={(e) => setViewSettings(prev => ({ ...prev, showDueDate: e.target.checked }))}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Due Date</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={viewSettings.showAssignee}
+                onChange={(e) => setViewSettings(prev => ({ ...prev, showAssignee: e.target.checked }))}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Assignee</span>
+            </label>
           </div>
         </div>
       </div>
 
-      {/* Advanced Filters Panel */}
-      {showAdvancedFilters && (
+      {/* Column Management for Status View */}
+      {viewSettings.groupBy === 'status' && (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Card Content Options */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Card Content</h4>
-              <div className="space-y-2">
+          <h4 className="text-sm font-medium text-gray-900 mb-3">Column Management</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            {columns.map((column) => (
+              <div key={column.status} className="flex items-center justify-between p-2 bg-white rounded border">
                 <label className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    checked={viewSettings.showProgress}
-                    onChange={(e) => setViewSettings(prev => ({ ...prev, showProgress: e.target.checked }))}
+                    checked={column.visible}
+                    onChange={() => toggleColumnVisibility(column.status)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-sm text-gray-700">Show Progress Bar</span>
+                  <span className="text-xs text-gray-700 truncate">{column.title}</span>
                 </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={viewSettings.showDueDate}
-                    onChange={(e) => setViewSettings(prev => ({ ...prev, showDueDate: e.target.checked }))}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">Show Due Date</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={viewSettings.showAssignee}
-                    onChange={(e) => setViewSettings(prev => ({ ...prev, showAssignee: e.target.checked }))}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">Show Assignee</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={viewSettings.autoRefresh}
-                    onChange={(e) => setViewSettings(prev => ({ ...prev, autoRefresh: e.target.checked }))}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">Auto Refresh</span>
-                </label>
+                <button
+                  onClick={() => {
+                    setEditingColumn(column.status);
+                    setNewColumnTitle(column.title);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 p-1"
+                >
+                  <Edit className="h-3 w-3" />
+                </button>
               </div>
-            </div>
-
-            {/* Column Management */}
-            {viewSettings.groupBy === 'status' && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Column Management</h4>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {columns.map((column) => (
-                    <div key={column.status} className="flex items-center justify-between">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={column.visible}
-                          onChange={() => toggleColumnVisibility(column.status)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700">{column.title}</span>
-                      </label>
-                      <button
-                        onClick={() => {
-                          setEditingColumn(column.status);
-                          setNewColumnTitle(column.title);
-                        }}
-                        className="text-gray-400 hover:text-gray-600 p-1"
-                      >
-                        <Edit className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Quick Stats */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Quick Stats</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Cards:</span>
-                  <span className="font-medium">{filteredInvestigations.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Overdue:</span>
-                  <span className="font-medium text-red-600">
-                    {filteredInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Critical:</span>
-                  <span className="font-medium text-orange-600">
-                    {filteredInvestigations.filter(inv => inv.priority === 'critical').length}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Avg Progress:</span>
-                  <span className="font-medium text-blue-600">
-                    {filteredInvestigations.length > 0 ? Math.round(filteredInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / filteredInvestigations.length) : 0}%
-                  </span>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       )}
