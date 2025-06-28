@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { InvestigationProvider } from './contexts/InvestigationContext';
-import { Sidebar } from './components/Layout/Sidebar';
-import { Header } from './components/Layout/Header';
+import { Sidebar } from './components/layout/Sidebar';
+import { Header } from './components/layout/Header';
 import { DashboardView } from './components/Dashboard/DashboardView';
 import { TriggerInvestigation } from './components/Investigation/TriggerInvestigation';
 import { DecisionTree } from './components/Investigation/DecisionTree';
