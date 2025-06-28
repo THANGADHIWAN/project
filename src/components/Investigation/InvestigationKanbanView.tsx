@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, User, Calendar, AlertTriangle, Clock, Filter, Plus, Edit, Eye, Search, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, User, Calendar, AlertTriangle, Clock, Filter, Plus, Edit, Eye, Search } from 'lucide-react';
 import { StatusBadge } from '../Common/StatusBadge';
 import { ProgressBar } from '../Common/ProgressBar';
 import { Investigation, InvestigationStatus } from '../../types/investigation';
@@ -21,12 +21,10 @@ interface KanbanColumn {
 
 interface ViewSettings {
   groupBy: 'status' | 'priority' | 'assignee';
-  cardSize: 'compact' | 'normal' | 'detailed';
   showProgress: boolean;
   showDueDate: boolean;
   showAssignee: boolean;
   autoRefresh: boolean;
-  columnsPerRow: 3 | 4 | 5 | 6;
 }
 
 const defaultColumns: KanbanColumn[] = [
@@ -58,12 +56,10 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
   
   const [viewSettings, setViewSettings] = useState<ViewSettings>({
     groupBy: 'status',
-    cardSize: 'normal',
     showProgress: true,
     showDueDate: true,
     showAssignee: true,
-    autoRefresh: false,
-    columnsPerRow: 4
+    autoRefresh: false
   });
 
   React.useEffect(() => {
@@ -220,22 +216,16 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
     const isOverdue = daysRemaining < 0;
     const isDragging = draggedItem?.id === investigation.id;
 
-    const cardSizeClasses = {
-      compact: 'p-3 mb-2',
-      normal: 'p-4 mb-3',
-      detailed: 'p-5 mb-4'
-    };
-
     return (
       <div
         draggable
         onDragStart={(e) => handleDragStart(e, investigation)}
         onDragEnd={handleDragEnd}
-        className={`bg-white rounded-lg border-2 shadow-sm hover:shadow-md transition-all cursor-move select-none ${
+        className={`bg-white rounded-lg border-2 shadow-sm hover:shadow-md transition-all cursor-move select-none p-4 mb-3 ${
           isDragging 
             ? 'opacity-50 border-blue-400 transform rotate-2 scale-105' 
             : 'border-gray-200 hover:border-blue-300'
-        } ${cardSizeClasses[viewSettings.cardSize]}`}
+        }`}
       >
         <div className="flex items-start justify-between mb-2">
           <button
@@ -258,19 +248,15 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
           </div>
         </div>
         
-        <h4 className={`font-medium text-gray-900 mb-2 line-clamp-2 leading-tight ${
-          viewSettings.cardSize === 'compact' ? 'text-xs' : 'text-sm'
-        }`}>
+        <h4 className="font-medium text-gray-900 mb-2 line-clamp-2 leading-tight text-sm">
           {investigation.title}
         </h4>
         
         <div className="flex items-center justify-between mb-2">
           <StatusBadge status={investigation.priority} type="priority" />
-          {viewSettings.cardSize !== 'compact' && (
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              {investigation.currentStep}
-            </span>
-          )}
+          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+            {investigation.currentStep}
+          </span>
         </div>
         
         {viewSettings.showProgress && (
@@ -305,7 +291,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
           )}
         </div>
         
-        {isOverdue && viewSettings.cardSize !== 'compact' && (
+        {isOverdue && (
           <div className="mt-2 flex items-center space-x-1 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
             <AlertTriangle className="h-3 w-3" />
             <span className="font-medium">{Math.abs(daysRemaining)} days overdue</span>
@@ -342,49 +328,17 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
           </button>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Group By Selector */}
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700">Group by:</label>
-            <select
-              value={viewSettings.groupBy}
-              onChange={(e) => setViewSettings(prev => ({ ...prev, groupBy: e.target.value as any }))}
-              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="status">Status</option>
-              <option value="priority">Priority</option>
-              <option value="assignee">Assignee</option>
-            </select>
-          </div>
-
-          {/* Card Size */}
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700">Card Size:</label>
-            <select
-              value={viewSettings.cardSize}
-              onChange={(e) => setViewSettings(prev => ({ ...prev, cardSize: e.target.value as any }))}
-              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="compact">Compact</option>
-              <option value="normal">Normal</option>
-              <option value="detailed">Detailed</option>
-            </select>
-          </div>
-
-          {/* Columns per Row */}
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700">Columns:</label>
-            <select
-              value={viewSettings.columnsPerRow}
-              onChange={(e) => setViewSettings(prev => ({ ...prev, columnsPerRow: Number(e.target.value) as any }))}
-              className="px-3 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value={3}>3</option>
-              <option value={4}>4</option>
-              <option value={5}>5</option>
-              <option value={6}>6</option>
-            </select>
-          </div>
+        <div className="flex items-center space-x-2">
+          <label className="text-sm font-medium text-gray-700">Group by:</label>
+          <select
+            value={viewSettings.groupBy}
+            onChange={(e) => setViewSettings(prev => ({ ...prev, groupBy: e.target.value as any }))}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="status">Status</option>
+            <option value="priority">Priority</option>
+            <option value="assignee">Assignee</option>
+          </select>
         </div>
       </div>
 
@@ -528,8 +482,15 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
         </div>
       )}
       
-      <div className="overflow-x-auto">
-        <div className={`grid gap-4 min-w-max pb-4`} style={{ gridTemplateColumns: `repeat(${Math.min(groupColumns.length, viewSettings.columnsPerRow)}, minmax(280px, 1fr))` }}>
+      {/* Kanban Board - Always Horizontal Scrolling */}
+      <div className="w-full overflow-x-auto">
+        <div 
+          className="flex gap-4 pb-4" 
+          style={{ 
+            minWidth: `${groupColumns.length * 300}px`,
+            width: 'max-content'
+          }}
+        >
           {groupColumns.map((column) => {
             const columnInvestigations = getInvestigationsByGroup(column.status);
             const isDragOver = dragOverColumn === column.status;
@@ -540,6 +501,11 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
                 className={`flex flex-col transition-all duration-200 ${
                   isDragOver ? 'transform scale-105' : ''
                 }`}
+                style={{ 
+                  width: '280px',
+                  minWidth: '280px',
+                  flexShrink: 0
+                }}
                 onDragOver={(e) => handleDragOver(e, column.status)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, column.status)}
@@ -548,7 +514,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
                   isDragOver ? 'border-blue-400 bg-blue-50' : ''
                 }`}>
                   <div className="flex items-center justify-between">
-                    <h4 className={`font-semibold ${column.color}`}>{column.title}</h4>
+                    <h4 className={`font-semibold ${column.color} truncate`}>{column.title}</h4>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm font-bold text-gray-700 bg-white rounded-full px-3 py-1 shadow-sm">
                         {columnInvestigations.length}
