@@ -340,49 +340,6 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Active</p>
-              <p className="text-2xl font-bold text-gray-900">{filteredInvestigations.filter(inv => inv.status !== 'completed' && inv.status !== 'closed').length}</p>
-            </div>
-            <Clock className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Overdue</p>
-              <p className="text-2xl font-bold text-red-600">{filteredInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}</p>
-            </div>
-            <AlertTriangle className="h-8 w-8 text-red-600" />
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Critical Priority</p>
-              <p className="text-2xl font-bold text-orange-600">{filteredInvestigations.filter(inv => inv.priority === 'critical').length}</p>
-            </div>
-            <AlertTriangle className="h-8 w-8 text-orange-600" />
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-green-600">{filteredInvestigations.filter(inv => inv.status === 'completed').length}</p>
-            </div>
-            <CheckCircle className="h-8 w-8 text-green-600" />
-          </div>
-        </div>
-      </div>
-
       {/* Search and Filters */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
