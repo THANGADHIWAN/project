@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, User, Calendar, AlertTriangle, Clock, Filter, Edit, Eye, CheckCircle, Search, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, User, Calendar, AlertTriangle, Clock, Filter, Edit, Eye, CheckCircle, Search } from 'lucide-react';
 import { StatusBadge } from '../Common/StatusBadge';
 import { ProgressBar } from '../Common/ProgressBar';
 import { Investigation, InvestigationStatus } from '../../types/investigation';
@@ -21,8 +21,7 @@ interface KanbanColumn {
 
 interface ViewSettings {
   groupBy: 'status' | 'priority' | 'assignee';
-  sortBy: 'dueDate' | 'priority' | 'createdAt' | 'title' | 'progress';
-  sortOrder: 'asc' | 'desc';
+  sortBy: 'dueDate-asc' | 'dueDate-desc' | 'priority-asc' | 'priority-desc' | 'createdAt-asc' | 'createdAt-desc' | 'title-asc' | 'title-desc' | 'progress-asc' | 'progress-desc';
   showProgress: boolean;
   showDueDate: boolean;
   showAssignee: boolean;
@@ -56,8 +55,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
   
   const [viewSettings, setViewSettings] = useState<ViewSettings>({
     groupBy: 'status',
-    sortBy: 'dueDate',
-    sortOrder: 'asc',
+    sortBy: 'dueDate-asc',
     showProgress: true,
     showDueDate: true,
     showAssignee: true
@@ -76,9 +74,10 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
 
   const sortInvestigations = (investigations: Investigation[]) => {
     return [...investigations].sort((a, b) => {
+      const [sortField, sortOrder] = viewSettings.sortBy.split('-');
       let aValue: any, bValue: any;
       
-      switch (viewSettings.sortBy) {
+      switch (sortField) {
         case 'dueDate':
           aValue = new Date(a.dueDate).getTime();
           bValue = new Date(b.dueDate).getTime();
@@ -104,7 +103,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
           return 0;
       }
       
-      if (viewSettings.sortOrder === 'asc') {
+      if (sortOrder === 'asc') {
         return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
       } else {
         return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
@@ -392,7 +391,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
 
       {/* Search and Filters */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Search */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
@@ -422,89 +421,47 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
             </select>
           </div>
 
-          {/* Sort By */}
+          {/* Sort */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Sort by</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Sort</label>
             <select
               value={viewSettings.sortBy}
               onChange={(e) => setViewSettings(prev => ({ ...prev, sortBy: e.target.value as any }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="dueDate">Due Date</option>
-              <option value="priority">Priority</option>
-              <option value="createdAt">Created Date</option>
-              <option value="title">Title</option>
-              <option value="progress">Progress</option>
+              <option value="dueDate-asc">Due Date (Earliest First)</option>
+              <option value="dueDate-desc">Due Date (Latest First)</option>
+              <option value="priority-desc">Priority (High to Low)</option>
+              <option value="priority-asc">Priority (Low to High)</option>
+              <option value="createdAt-desc">Created Date (Newest First)</option>
+              <option value="createdAt-asc">Created Date (Oldest First)</option>
+              <option value="title-asc">Title (A to Z)</option>
+              <option value="title-desc">Title (Z to A)</option>
+              <option value="progress-desc">Progress (High to Low)</option>
+              <option value="progress-asc">Progress (Low to High)</option>
             </select>
           </div>
-
-          {/* Sort Order */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Sort Order</label>
-            <button
-              onClick={() => setViewSettings(prev => ({ 
-                ...prev, 
-                sortOrder: prev.sortOrder === 'asc' ? 'desc' : 'asc' 
-              }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent flex items-center justify-center space-x-2"
-            >
-              <ArrowUpDown className="h-4 w-4" />
-              <span>{viewSettings.sortOrder === 'asc' ? 'Ascending' : 'Descending'}</span>
-            </button>
-          </div>
         </div>
 
-        {/* Display Options */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Display Options</label>
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={viewSettings.showProgress}
-                onChange={(e) => setViewSettings(prev => ({ ...prev, showProgress: e.target.checked }))}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">Show Progress</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={viewSettings.showDueDate}
-                onChange={(e) => setViewSettings(prev => ({ ...prev, showDueDate: e.target.checked }))}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">Show Due Date</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={viewSettings.showAssignee}
-                onChange={(e) => setViewSettings(prev => ({ ...prev, showAssignee: e.target.checked }))}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">Show Assignee</span>
-            </label>
-            
-            {/* Column Management for Status View */}
-            {viewSettings.groupBy === 'status' && (
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-700">Columns:</span>
-                {columns.map((column) => (
-                  <label key={column.status} className="flex items-center space-x-1">
-                    <input
-                      type="checkbox"
-                      checked={column.visible}
-                      onChange={() => toggleColumnVisibility(column.status)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-xs text-gray-600">{column.title}</span>
-                  </label>
-                ))}
-              </div>
-            )}
+        {/* Column Management for Status View */}
+        {viewSettings.groupBy === 'status' && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Visible Columns</label>
+            <div className="flex flex-wrap gap-4">
+              {columns.map((column) => (
+                <label key={column.status} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={column.visible}
+                    onChange={() => toggleColumnVisibility(column.status)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">{column.title}</span>
+                </label>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
       
       {/* Kanban Board - Always Horizontal Scrolling */}
