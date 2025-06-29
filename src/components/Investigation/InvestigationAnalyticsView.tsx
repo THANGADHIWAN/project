@@ -950,7 +950,7 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
   };
 
   return (
-
+    <div className="space-y-6">
       {/* Controls */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
