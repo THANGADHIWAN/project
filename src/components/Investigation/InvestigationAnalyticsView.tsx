@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Download, BarChart3, PieChart, TrendingUp, Activity, X, RefreshCw, Calendar, Filter, LineChart, Zap, Target, Users, Clock, AlertTriangle, FileText, CheckCircle } from 'lucide-react';
+import { Plus, Download, BarChart3, PieChart, TrendingUp, Activity, X, RefreshCw, Calendar, Filter, LineChart, Zap, Target, Users, Clock, AlertTriangle } from 'lucide-react';
 import { Investigation } from '../../types/investigation';
 
 interface InvestigationAnalyticsViewProps {
@@ -52,8 +52,7 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
     'status-distribution', 
     'priority-breakdown',
     'investigator-workload',
-    'time-to-closure',
-    'capa-effectiveness'
+    'time-to-closure'
   ]);
   const [showChartSelector, setShowChartSelector] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -913,80 +912,37 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Key Metrics */}
+      {/* Key Metrics */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Investigation Analytics Dashboard</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-center mb-2">
-              <FileText className="h-8 w-8 text-blue-600" />
-            </div>
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
             <div className="text-2xl font-bold text-blue-600">{analyticsData.total}</div>
             <div className="text-sm text-gray-600">Total Investigations</div>
-            <div className="text-xs text-blue-500 mt-1">
-              {analyticsData.total > 0 ? '+12% from last month' : 'No data'}
-            </div>
           </div>
-          
-          <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-            <div className="flex items-center justify-center mb-2">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
+          <div className="text-center p-4 bg-green-50 rounded-lg">
             <div className="text-2xl font-bold text-green-600">
               {analyticsData.statusCounts['Completed'] || 0}
             </div>
             <div className="text-sm text-gray-600">Completed</div>
-            <div className="text-xs text-green-500 mt-1">
-              {analyticsData.total > 0 ? `${Math.round(((analyticsData.statusCounts['Completed'] || 0) / analyticsData.total) * 100)}% completion rate` : '0% rate'}
-            </div>
           </div>
-          
-          <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg border border-yellow-200">
-            <div className="flex items-center justify-center mb-2">
-              <Clock className="h-8 w-8 text-yellow-600" />
-            </div>
+          <div className="text-center p-4 bg-yellow-50 rounded-lg">
             <div className="text-2xl font-bold text-yellow-600">
               {analyticsData.statusCounts['In Progress'] || 0}
             </div>
             <div className="text-sm text-gray-600">In Progress</div>
-            <div className="text-xs text-yellow-500 mt-1">
-              Avg. 12.5 days duration
-            </div>
           </div>
-          
-          <div className="text-center p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border border-red-200">
-            <div className="flex items-center justify-center mb-2">
-              <AlertTriangle className="h-8 w-8 text-red-600" />
-            </div>
+          <div className="text-center p-4 bg-red-50 rounded-lg">
             <div className="text-2xl font-bold text-red-600">{analyticsData.overdue}</div>
             <div className="text-sm text-gray-600">Overdue</div>
-            <div className="text-xs text-red-500 mt-1">
-              {analyticsData.overdue > 0 ? 'Requires attention' : 'All on track'}
-            </div>
           </div>
-          
-          <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-            <div className="flex items-center justify-center mb-2">
-              <Target className="h-8 w-8 text-purple-600" />
-            </div>
+          <div className="text-center p-4 bg-purple-50 rounded-lg">
             <div className="text-2xl font-bold text-purple-600">{analyticsData.avgProgress}%</div>
             <div className="text-sm text-gray-600">Avg. Progress</div>
-            <div className="text-xs text-purple-500 mt-1">
-              {analyticsData.avgProgress >= 75 ? 'Excellent' : analyticsData.avgProgress >= 50 ? 'Good' : 'Needs attention'}
-            </div>
           </div>
-          
-          <div className="text-center p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg border border-indigo-200">
-            <div className="flex items-center justify-center mb-2">
-              <Users className="h-8 w-8 text-indigo-600" />
-            </div>
-            <div className="text-2xl font-bold text-indigo-600">
-              {Object.keys(analyticsData.assigneeCounts).length}
-            </div>
-            <div className="text-sm text-gray-600">Active Investigators</div>
-            <div className="text-xs text-indigo-500 mt-1">
-              Avg. {analyticsData.total > 0 ? Math.round(analyticsData.total / Math.max(Object.keys(analyticsData.assigneeCounts).length, 1)) : 0} cases each
-            </div>
+          <div className="text-center p-4 bg-indigo-50 rounded-lg">
+            <div className="text-2xl font-bold text-indigo-600">12.5</div>
+            <div className="text-sm text-gray-600">Avg. Days</div>
           </div>
         </div>
       </div>
@@ -1058,21 +1014,13 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
             <div key={chartId} className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="p-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <chart.icon className="h-4 w-4 text-gray-500" />
-                    <h3 className="text-sm font-medium text-gray-900">{chart.title}</h3>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      {chart.category}
-                    </span>
-                    <button
-                      onClick={() => removeChart(chartId)}
-                      className="text-gray-400 hover:text-red-600 p-1 rounded hover:bg-red-50"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <h3 className="text-sm font-medium text-gray-900">{chart.title}</h3>
+                  <button
+                    onClick={() => removeChart(chartId)}
+                    className="text-gray-400 hover:text-red-600 p-1 rounded hover:bg-red-50"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
               <div className="p-4 h-64">
