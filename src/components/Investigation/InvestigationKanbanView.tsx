@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, User, Calendar, AlertTriangle, Clock, Filter, Plus, Edit, Eye, Search } from 'lucide-react';
+import { MoreHorizontal, User, Calendar, AlertTriangle, Clock, Filter, Edit, Eye } from 'lucide-react';
 import { StatusBadge } from '../Common/StatusBadge';
 import { ProgressBar } from '../Common/ProgressBar';
 import { Investigation, InvestigationStatus } from '../../types/investigation';
@@ -49,7 +49,6 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [localInvestigations, setLocalInvestigations] = useState<Investigation[]>(investigations);
   const [columns, setColumns] = useState<KanbanColumn[]>(defaultColumns);
-  const [searchTerm, setSearchTerm] = useState('');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
   const [newColumnTitle, setNewColumnTitle] = useState('');
@@ -66,20 +65,13 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
     setLocalInvestigations(investigations);
   }, [investigations]);
 
-  const filteredInvestigations = localInvestigations.filter(inv => {
-    const matchesSearch = inv.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         inv.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         inv.assignedTo.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
-
   const getInvestigationsByGroup = (groupKey: string) => {
     if (viewSettings.groupBy === 'status') {
-      return filteredInvestigations.filter(inv => inv.status === groupKey);
+      return localInvestigations.filter(inv => inv.status === groupKey);
     } else if (viewSettings.groupBy === 'priority') {
-      return filteredInvestigations.filter(inv => inv.priority === groupKey);
+      return localInvestigations.filter(inv => inv.priority === groupKey);
     } else if (viewSettings.groupBy === 'assignee') {
-      return filteredInvestigations.filter(inv => inv.assignedTo === groupKey);
+      return localInvestigations.filter(inv => inv.assignedTo === groupKey);
     }
     return [];
   };
@@ -97,7 +89,7 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
         order: 0
       }));
     } else if (viewSettings.groupBy === 'assignee') {
-      const assignees = [...new Set(filteredInvestigations.map(inv => inv.assignedTo))];
+      const assignees = [...new Set(localInvestigations.map(inv => inv.assignedTo))];
       return assignees.map((assignee, index) => ({
         status: assignee as InvestigationStatus,
         title: assignee,
@@ -305,182 +297,162 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      {/* Search and Filters */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Search investigations..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+      {/* Advanced Filters */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Card Content Options */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Card Content</h4>
+            <div className="space-y-2">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={viewSettings.showProgress}
+                  onChange={(e) => setViewSettings(prev => ({ ...prev, showProgress: e.target.checked }))}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Show Progress Bar</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={viewSettings.showDueDate}
+                  onChange={(e) => setViewSettings(prev => ({ ...prev, showDueDate: e.target.checked }))}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Show Due Date</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={viewSettings.showAssignee}
+                  onChange={(e) => setViewSettings(prev => ({ ...prev, showAssignee: e.target.checked }))}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Show Assignee</span>
+              </label>
+            </div>
           </div>
-          
-          <button
-            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2"
-          >
-            <Filter className="h-4 w-4" />
-            <span>Advanced Filter</span>
-          </button>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <label className="text-sm font-medium text-gray-700">Group by:</label>
-          <select
-            value={viewSettings.groupBy}
-            onChange={(e) => setViewSettings(prev => ({ ...prev, groupBy: e.target.value as any }))}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="status">Status</option>
-            <option value="priority">Priority</option>
-            <option value="assignee">Assignee</option>
-          </select>
-        </div>
-      </div>
 
-      {/* Advanced Filters Panel */}
-      {showAdvancedFilters && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Card Content Options */}
+          {/* Column Management */}
+          {viewSettings.groupBy === 'status' && (
             <div>
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Card Content</h4>
-              <div className="space-y-2">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={viewSettings.showProgress}
-                    onChange={(e) => setViewSettings(prev => ({ ...prev, showProgress: e.target.checked }))}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">Show Progress Bar</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={viewSettings.showDueDate}
-                    onChange={(e) => setViewSettings(prev => ({ ...prev, showDueDate: e.target.checked }))}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">Show Due Date</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={viewSettings.showAssignee}
-                    onChange={(e) => setViewSettings(prev => ({ ...prev, showAssignee: e.target.checked }))}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">Show Assignee</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={viewSettings.autoRefresh}
-                    onChange={(e) => setViewSettings(prev => ({ ...prev, autoRefresh: e.target.checked }))}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">Auto Refresh</span>
-                </label>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Column Management</h4>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {columns.map((column) => (
+                  <div key={column.status} className="flex items-center justify-between">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={column.visible}
+                        onChange={() => toggleColumnVisibility(column.status)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{column.title}</span>
+                    </label>
+                    <button
+                      onClick={() => {
+                        setEditingColumn(column.status);
+                        setNewColumnTitle(column.title);
+                      }}
+                      className="text-gray-400 hover:text-gray-600 p-1"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
+          )}
 
-            {/* Column Management */}
-            {viewSettings.groupBy === 'status' && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Column Management</h4>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {columns.map((column) => (
-                    <div key={column.status} className="flex items-center justify-between">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={column.visible}
-                          onChange={() => toggleColumnVisibility(column.status)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700">{column.title}</span>
-                      </label>
-                      <button
-                        onClick={() => {
-                          setEditingColumn(column.status);
-                          setNewColumnTitle(column.title);
-                        }}
-                        className="text-gray-400 hover:text-gray-600 p-1"
-                      >
-                        <Edit className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Quick Stats */}
+          {/* Group By and Quick Stats */}
+          <div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Group by:</label>
+              <select
+                value={viewSettings.groupBy}
+                onChange={(e) => setViewSettings(prev => ({ ...prev, groupBy: e.target.value as any }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="status">Status</option>
+                <option value="priority">Priority</option>
+                <option value="assignee">Assignee</option>
+              </select>
+            </div>
+            
             <div>
               <h4 className="text-sm font-medium text-gray-900 mb-3">Quick Stats</h4>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Total Cards:</span>
-                  <span className="font-medium">{filteredInvestigations.length}</span>
+                  <span className="font-medium">{localInvestigations.length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Overdue:</span>
                   <span className="font-medium text-red-600">
-                    {filteredInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
+                    {localInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Critical:</span>
                   <span className="font-medium text-orange-600">
-                    {filteredInvestigations.filter(inv => inv.priority === 'critical').length}
+                    {localInvestigations.filter(inv => inv.priority === 'critical').length}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Avg Progress:</span>
                   <span className="font-medium text-blue-600">
-                    {filteredInvestigations.length > 0 ? Math.round(filteredInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / filteredInvestigations.length) : 0}%
+                    {localInvestigations.length > 0 ? Math.round(localInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / localInvestigations.length) : 0}%
                   </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Column Title Editor */}
-      {editingColumn && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Column Title</h3>
-            <input
-              type="text"
-              value={newColumnTitle}
-              onChange={(e) => setNewColumnTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter column title"
-            />
-            <div className="flex justify-end space-x-3 mt-4">
-              <button
-                onClick={() => setEditingColumn(null)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => updateColumnTitle(editingColumn as InvestigationStatus, newColumnTitle)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Save
-              </button>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Active</p>
+              <p className="text-2xl font-bold text-gray-900">{localInvestigations.filter(inv => inv.status !== 'completed' && inv.status !== 'closed').length}</p>
             </div>
+            <Clock className="h-8 w-8 text-blue-600" />
           </div>
         </div>
-      )}
+        
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Overdue</p>
+              <p className="text-2xl font-bold text-red-600">{localInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}</p>
+            </div>
+            <AlertTriangle className="h-8 w-8 text-red-600" />
+          </div>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Critical Priority</p>
+              <p className="text-2xl font-bold text-orange-600">{localInvestigations.filter(inv => inv.priority === 'critical').length}</p>
+            </div>
+            <AlertTriangle className="h-8 w-8 text-orange-600" />
+          </div>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Completed</p>
+              <p className="text-2xl font-bold text-green-600">{localInvestigations.filter(inv => inv.status === 'completed').length}</p>
+            </div>
+            <CheckCircle className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+      </div>
       
       {/* Kanban Board - Always Horizontal Scrolling */}
       <div className="w-full overflow-x-auto">
@@ -519,9 +491,6 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
                       <span className="text-sm font-bold text-gray-700 bg-white rounded-full px-3 py-1 shadow-sm">
                         {columnInvestigations.length}
                       </span>
-                      <button className="text-gray-500 hover:text-gray-700 p-1 rounded hover:bg-white/50">
-                        <Plus className="h-4 w-4" />
-                      </button>
                     </div>
                   </div>
                   
@@ -559,28 +528,58 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
         </div>
       </div>
 
+      {/* Column Title Editor */}
+      {editingColumn && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Column Title</h3>
+            <input
+              type="text"
+              value={newColumnTitle}
+              onChange={(e) => setNewColumnTitle(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter column title"
+            />
+            <div className="flex justify-end space-x-3 mt-4">
+              <button
+                onClick={() => setEditingColumn(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => updateColumnTitle(editingColumn as InvestigationStatus, newColumnTitle)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Board Statistics */}
       <div className="mt-6 pt-6 border-t border-gray-200">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-gray-900">{filteredInvestigations.length}</div>
+            <div className="text-2xl font-bold text-gray-900">{localInvestigations.length}</div>
             <div className="text-sm text-gray-600">Total Cards</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-blue-600">
-              {filteredInvestigations.filter(inv => inv.status === 'in-progress').length}
+              {localInvestigations.filter(inv => inv.status === 'in-progress').length}
             </div>
             <div className="text-sm text-gray-600">In Progress</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-red-600">
-              {filteredInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
+              {localInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
             </div>
             <div className="text-sm text-gray-600">Overdue</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-green-600">
-              {filteredInvestigations.length > 0 ? Math.round(filteredInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / filteredInvestigations.length) : 0}%
+              {localInvestigations.length > 0 ? Math.round(localInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / localInvestigations.length) : 0}%
             </div>
             <div className="text-sm text-gray-600">Avg Progress</div>
           </div>
