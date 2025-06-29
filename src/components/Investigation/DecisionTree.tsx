@@ -1,6 +1,7 @@
 import React, { useCallback, useState, useRef } from 'react';
 import { 
   ReactFlow, 
+  ReactFlowProvider,
   MiniMap, 
   Controls, 
   Background, 
@@ -383,7 +384,7 @@ const initialEdges: Edge[] = [
   },
 ];
 
-export function DecisionTree() {
+function DecisionTreeContent() {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -826,5 +827,13 @@ export function DecisionTree() {
         </div>
       )}
     </div>
+  );
+}
+
+export function DecisionTree() {
+  return (
+    <ReactFlowProvider>
+      <DecisionTreeContent />
+    </ReactFlowProvider>
   );
 }
