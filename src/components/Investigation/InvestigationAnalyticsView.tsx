@@ -52,7 +52,11 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
     'status-distribution', 
     'priority-breakdown',
     'investigator-workload',
-    'time-to-closure'
+    'time-to-closure',
+    'monthly-volume',
+    'capa-effectiveness',
+    'delay-trends',
+    'shift-analysis'
   ]);
   const [showChartSelector, setShowChartSelector] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -107,7 +111,13 @@ export function InvestigationAnalyticsView({ investigations }: InvestigationAnal
       const date = new Date();
       date.setDate(date.getDate() - (29 - i));
       const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const count = Math.floor(Math.random() * 5) + 1; // Simulated realistic data
+      
+      // Count actual investigations created on this date
+      const count = filteredInvestigations.filter(inv => {
+        const invDate = new Date(inv.createdAt);
+        return invDate.toDateString() === date.toDateString();
+      }).length;
+      
       return { date: dateStr, count };
     });
 
@@ -410,6 +420,22 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
                     />
                   ))}
                   
+                  {/* Y-axis labels */}
+                  {[0, 1, 2, 3, 4].map(i => {
+                    const value = Math.round(maxLineValue - (i * lineRange / 4));
+                    return (
+                      <text
+                        key={i}
+                        x="40"
+                        y={35 + i * 25}
+                        textAnchor="end"
+                        className="text-xs fill-gray-500"
+                      >
+                        {value}
+                      </text>
+                    );
+                  })}
+                  
                   {/* Data line and area */}
                   <polyline
                     points={data.data.map((value, index) => {
@@ -471,7 +497,7 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
             </div>
             <div className="px-4 pb-2">
               <div className="flex justify-between text-xs text-gray-500">
-                {data.labels.map((label, index) => (
+                {data.labels.slice(0, 5).map((label, index) => (
                   <span key={index}>{label}</span>
                 ))}
               </div>
@@ -485,6 +511,19 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
             <div className="flex-1 flex items-center justify-center p-4">
               <div className="w-full h-40">
                 <svg viewBox="0 0 400 160" className="w-full h-full">
+                  {/* Grid lines */}
+                  {[0, 1, 2, 3, 4].map(i => (
+                    <line
+                      key={i}
+                      x1="50"
+                      y1={30 + i * 25}
+                      x2="350"
+                      y2={30 + i * 25}
+                      stroke="#f3f4f6"
+                      strokeWidth="1"
+                    />
+                  ))}
+                  
                   {data.datasets?.map((dataset, datasetIndex) => (
                     <g key={datasetIndex}>
                       <polyline
