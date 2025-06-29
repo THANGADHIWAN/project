@@ -469,34 +469,6 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
             })}
           </div>
         </div>
-
-        {/* Board Statistics */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-gray-900">{filteredInvestigations.length}</div>
-              <div className="text-sm text-gray-600">Total Cards</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-blue-600">
-                {filteredInvestigations.filter(inv => inv.status === 'in-progress').length}
-              </div>
-              <div className="text-sm text-gray-600">In Progress</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-red-600">
-                {filteredInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
-              </div>
-              <div className="text-sm text-gray-600">Overdue</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-green-600">
-                {filteredInvestigations.length > 0 ? Math.round(filteredInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / filteredInvestigations.length) : 0}%
-              </div>
-              <div className="text-sm text-gray-600">Avg Progress</div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Column Title Editor */}
