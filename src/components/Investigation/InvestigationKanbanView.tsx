@@ -339,9 +339,9 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
   const groupColumns = getGroupColumns();
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="space-y-6">
       {/* Search and Filters */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Search */}
           <div>
@@ -396,76 +396,106 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
       </div>
       
       {/* Kanban Board - Always Horizontal Scrolling */}
-      <div className="w-full overflow-x-auto">
-        <div 
-          className="flex gap-4 pb-4" 
-          style={{ 
-            minWidth: `${groupColumns.length * 300}px`,
-            width: 'max-content'
-          }}
-        >
-          {groupColumns.map((column) => {
-            const columnInvestigations = getInvestigationsByGroup(column.status);
-            const isDragOver = dragOverColumn === column.status;
-            
-            return (
-              <div
-                key={column.status}
-                className={`flex flex-col transition-all duration-200 ${
-                  isDragOver ? 'transform scale-105' : ''
-                }`}
-                style={{ 
-                  width: '280px',
-                  minWidth: '280px',
-                  flexShrink: 0
-                }}
-                onDragOver={(e) => handleDragOver(e, column.status)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, column.status)}
-              >
-                <div className={`${column.bgColor} border-2 rounded-lg p-4 mb-4 transition-all duration-200 ${
-                  isDragOver ? 'border-blue-400 bg-blue-50' : ''
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <h4 className={`font-semibold ${column.color} truncate`}>{column.title}</h4>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-bold text-gray-700 bg-white rounded-full px-3 py-1 shadow-sm">
-                        {columnInvestigations.length}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="w-full overflow-x-auto">
+          <div 
+            className="flex gap-4 pb-4" 
+            style={{ 
+              minWidth: `${groupColumns.length * 300}px`,
+              width: 'max-content'
+            }}
+          >
+            {groupColumns.map((column) => {
+              const columnInvestigations = getInvestigationsByGroup(column.status);
+              const isDragOver = dragOverColumn === column.status;
+              
+              return (
+                <div
+                  key={column.status}
+                  className={`flex flex-col transition-all duration-200 ${
+                    isDragOver ? 'transform scale-105' : ''
+                  }`}
+                  style={{ 
+                    width: '280px',
+                    minWidth: '280px',
+                    flexShrink: 0
+                  }}
+                  onDragOver={(e) => handleDragOver(e, column.status)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, column.status)}
+                >
+                  <div className={`${column.bgColor} border-2 rounded-lg p-4 mb-4 transition-all duration-200 ${
+                    isDragOver ? 'border-blue-400 bg-blue-50' : ''
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <h4 className={`font-semibold ${column.color} truncate`}>{column.title}</h4>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-bold text-gray-700 bg-white rounded-full px-3 py-1 shadow-sm">
+                          {columnInvestigations.length}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-2 flex items-center space-x-4 text-xs text-gray-600">
+                      <span>
+                        Overdue: {columnInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
+                      </span>
+                      <span>
+                        Critical: {columnInvestigations.filter(inv => inv.priority === 'critical').length}
                       </span>
                     </div>
                   </div>
                   
-                  <div className="mt-2 flex items-center space-x-4 text-xs text-gray-600">
-                    <span>
-                      Overdue: {columnInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
-                    </span>
-                    <span>
-                      Critical: {columnInvestigations.filter(inv => inv.priority === 'critical').length}
-                    </span>
+                  <div className={`flex-1 min-h-[400px] transition-all duration-200 ${
+                    isDragOver ? 'bg-blue-50/50 rounded-lg border-2 border-dashed border-blue-300' : ''
+                  }`}>
+                    {columnInvestigations.map((investigation) => (
+                      <InvestigationCard
+                        key={investigation.id}
+                        investigation={investigation}
+                      />
+                    ))}
+                    
+                    {columnInvestigations.length === 0 && (
+                      <div className={`text-center text-gray-400 text-sm mt-8 p-8 border-2 border-dashed border-gray-200 rounded-lg transition-all duration-200 ${
+                        isDragOver ? 'border-blue-300 bg-blue-50 text-blue-600' : ''
+                      }`}>
+                        {isDragOver ? 'Drop here to update' : 'No investigations'}
+                      </div>
+                    )}
                   </div>
                 </div>
-                
-                <div className={`flex-1 min-h-[400px] transition-all duration-200 ${
-                  isDragOver ? 'bg-blue-50/50 rounded-lg border-2 border-dashed border-blue-300' : ''
-                }`}>
-                  {columnInvestigations.map((investigation) => (
-                    <InvestigationCard
-                      key={investigation.id}
-                      investigation={investigation}
-                    />
-                  ))}
-                  
-                  {columnInvestigations.length === 0 && (
-                    <div className={`text-center text-gray-400 text-sm mt-8 p-8 border-2 border-dashed border-gray-200 rounded-lg transition-all duration-200 ${
-                      isDragOver ? 'border-blue-300 bg-blue-50 text-blue-600' : ''
-                    }`}>
-                      {isDragOver ? 'Drop here to update' : 'No investigations'}
-                    </div>
-                  )}
-                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Board Statistics */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-gray-900">{filteredInvestigations.length}</div>
+              <div className="text-sm text-gray-600">Total Cards</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-blue-600">
+                {filteredInvestigations.filter(inv => inv.status === 'in-progress').length}
               </div>
-            );
-          })}
+              <div className="text-sm text-gray-600">In Progress</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-red-600">
+                {filteredInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
+              </div>
+              <div className="text-sm text-gray-600">Overdue</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-green-600">
+                {filteredInvestigations.length > 0 ? Math.round(filteredInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / filteredInvestigations.length) : 0}%
+              </div>
+              <div className="text-sm text-gray-600">Avg Progress</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -498,34 +528,6 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
           </div>
         </div>
       )}
-
-      {/* Board Statistics */}
-      <div className="mt-6 pt-6 border-t border-gray-200">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div>
-            <div className="text-2xl font-bold text-gray-900">{filteredInvestigations.length}</div>
-            <div className="text-sm text-gray-600">Total Cards</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-blue-600">
-              {filteredInvestigations.filter(inv => inv.status === 'in-progress').length}
-            </div>
-            <div className="text-sm text-gray-600">In Progress</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-red-600">
-              {filteredInvestigations.filter(inv => getDaysRemaining(inv.dueDate) < 0).length}
-            </div>
-            <div className="text-sm text-gray-600">Overdue</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-green-600">
-              {filteredInvestigations.length > 0 ? Math.round(filteredInvestigations.reduce((acc, inv) => acc + inv.completionPercentage, 0) / filteredInvestigations.length) : 0}%
-            </div>
-            <div className="text-sm text-gray-600">Avg Progress</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
