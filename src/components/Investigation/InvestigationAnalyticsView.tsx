@@ -950,41 +950,6 @@ ${Object.entries(analyticsData.priorityCounts).map(([priority, count]) => `- ${p
   };
 
   return (
-    <div className="space-y-6">
-      {/* Key Metrics */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <div className="text-center p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600">{analyticsData.total}</div>
-            <div className="text-sm text-gray-600">Total Investigations</div>
-          </div>
-          <div className="text-center p-4 bg-green-50 rounded-lg">
-            <div className="text-2xl font-bold text-green-600">
-              {analyticsData.statusCounts['Completed'] || 0}
-            </div>
-            <div className="text-sm text-gray-600">Completed</div>
-          </div>
-          <div className="text-center p-4 bg-yellow-50 rounded-lg">
-            <div className="text-2xl font-bold text-yellow-600">
-              {analyticsData.statusCounts['In Progress'] || 0}
-            </div>
-            <div className="text-sm text-gray-600">In Progress</div>
-          </div>
-          <div className="text-center p-4 bg-red-50 rounded-lg">
-            <div className="text-2xl font-bold text-red-600">{analyticsData.overdue}</div>
-            <div className="text-sm text-gray-600">Overdue</div>
-          </div>
-          <div className="text-center p-4 bg-purple-50 rounded-lg">
-            <div className="text-2xl font-bold text-purple-600">{analyticsData.avgProgress}%</div>
-            <div className="text-sm text-gray-600">Avg. Progress</div>
-          </div>
-          <div className="text-center p-4 bg-indigo-50 rounded-lg">
-            <div className="text-2xl font-bold text-indigo-600">12.5</div>
-            <div className="text-sm text-gray-600">Avg. Days</div>
-          </div>
-        </div>
-      </div>
 
       {/* Controls */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
