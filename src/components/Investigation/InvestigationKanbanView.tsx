@@ -238,12 +238,6 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
     setDragOverColumn(null);
   };
 
-  const toggleColumnVisibility = (status: InvestigationStatus) => {
-    setColumns(prev => prev.map(col => 
-      col.status === status ? { ...col, visible: !col.visible } : col
-    ));
-  };
-
   const updateColumnTitle = (status: InvestigationStatus, newTitle: string) => {
     setColumns(prev => prev.map(col => 
       col.status === status ? { ...col, title: newTitle } : col
@@ -442,26 +436,6 @@ export function InvestigationKanbanView({ investigations, onInvestigationClick, 
             </select>
           </div>
         </div>
-
-        {/* Column Management for Status View */}
-        {viewSettings.groupBy === 'status' && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Visible Columns</label>
-            <div className="flex flex-wrap gap-4">
-              {columns.map((column) => (
-                <label key={column.status} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={column.visible}
-                    onChange={() => toggleColumnVisibility(column.status)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">{column.title}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
       
       {/* Kanban Board - Always Horizontal Scrolling */}
