@@ -1,70 +1,40 @@
-# Getting Started with Create React App
+# My Blog (React + Vite + Decap CMS)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This repository demonstrates a simple setup where non-technical writers can edit content via `/admin`
+and the site lists and renders Markdown posts.
 
-## Available Scripts
+## Quick start (local)
 
-In the project directory, you can run:
+1. Clone this repo.
+2. `npm install`
+3. `npm run dev` (open http://localhost:5173)
 
-### `npm start`
+## How content works
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- CMS commits markdown files into `content/posts/*.md`.
+- Before every build, `scripts/build-content.js` converts each `.md` into `public/content/<slug>.json` and creates `public/content/index.json`.
+- The React app fetches `index.json` and per-post `<slug>.json` at runtime.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Deploy to Netlify
 
-### `npm test`
+1. Push this repo to GitHub.
+2. In Netlify, create a new site from GitHub and select this repo.
+3. Set build command `npm run build` and publish dir `dist` (netlify.toml already configured).
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Enable editing (Admin)
 
-### `npm run build`
+To enable CMS editing you'll need to enable **Netlify Identity** and **Git Gateway** for the repo:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. On Netlify (site settings) → Identity → Enable Identity.
+2. Identity → Services → Enable **Git Gateway**.
+3. Invite users under Identity → Invite users. They will receive an email and can set a password.
+4. Open `https://your-site.netlify.app/admin` and sign in.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### How writers add a raw .md file only
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- Use the `Upload Markdown file` collection entry in the admin. Fill `Slug` with desired filename (no extension), paste raw markdown into the body, and click Publish. The CMS will create `content/posts/<slug>.md` in the repo.
 
-### `npm run eject`
+## Notes and tips
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- If you prefer drag-and-drop uploading of `.md` files directly to the repo via the browser, a custom endpoint using the GitHub API is required (not included)
+- If you need instant site updates without rebuilds, switch to a hosted CMS (Sanity/Contentful). This repo uses a build-time approach (static JSON files in `public`) for simplicity.

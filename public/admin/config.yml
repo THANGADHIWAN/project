@@ -2,19 +2,32 @@ backend:
   name: git-gateway
   branch: main
 
-media_folder: "public/images/uploads"
-public_folder: "/images/uploads"
+media_folder: "public/uploads"
+public_folder: "/uploads"
+
+publish_mode: editorial_workflow
 
 collections:
-  - name: "articles"
-    label: "Articles"
-    folder: "public/articles"
+  - name: "posts"
+    label: "Posts"
+    folder: "content/posts"
     create: true
     slug: "{{slug}}"
     extension: "md"
-    format: "frontmatter"
+    format: "markdown"
     fields:
-      - { label: "Title", name: "title", widget: "string", required: true }
-      - { label: "Publish Date", name: "date", widget: "datetime", required: true }
-      - { label: "Description", name: "description", widget: "text", required: false }
-      - { label: "Body", name: "body", widget: "markdown", required: true }
+      - {label: "Title", name: "title", widget: "string"}
+      - {label: "Date", name: "date", widget: "datetime"}
+      - {label: "Excerpt", name: "excerpt", widget: "text"}
+      - {label: "Cover Image", name: "cover", widget: "image", required: false}
+      - {label: "Body", name: "body", widget: "markdown"}
+
+  - name: "md-upload"
+    label: "Upload Markdown file"
+    files:
+      - label: "Upload markdown as file"
+        name: "upload_md"
+        file: "content/posts/{{slug}}.md"
+        fields:
+          - {label: "Slug (filename)", name: "slug", widget: "string"}
+          - {label: "Body (raw markdown)", name: "body", widget: "markdown"}
