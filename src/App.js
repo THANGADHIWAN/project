@@ -9,7 +9,7 @@ export default function App() {
       <nav className="p-4 space-x-4 border-b bg-gray-100">
         <Link to="/">Home</Link>
         <Link to="/articles">Articles</Link>
-        <a href="/admin" target="_blank" rel="noreferrer">Admin</a>
+        <a href="/admin/" target="_blank" rel="noreferrer">Admin</a>
       </nav>
 
       <div className="p-4">
