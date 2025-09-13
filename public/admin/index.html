@@ -9,5 +9,14 @@
   <body>
     <h1>Admin Panel</h1>
     <p>Netlify CMS is loading...</p>
+
+    <script>
+      // Initialize Netlify CMS
+      if (window.CMS) {
+        CMS.init();
+      } else {
+        console.error("Netlify CMS failed to load");
+      }
+    </script>
   </body>
 </html>
