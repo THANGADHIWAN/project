@@ -1,6 +1,5 @@
 [build]
-  # This runs your React build and also generates manifest if you have the script
-  command = "npm install --legacy-peer-deps && npm run build"
+  command = "CI= npm install --legacy-peer-deps && npm run build"
   publish = "build"
 
 # Optional: if you have Netlify Functions
@@ -11,4 +10,5 @@
 [[redirects]]
   from = "/*"
   to = "/index.html"
+  status = 200
   status = 200
