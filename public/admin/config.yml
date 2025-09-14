@@ -2,32 +2,20 @@ backend:
   name: git-gateway
   branch: main
 
-media_folder: "public/uploads"
-public_folder: "/uploads"
-
-publish_mode: editorial_workflow
+media_folder: "public/articles"  # uploaded files go here
+public_folder: "/articles"       # served via browser
 
 collections:
-  - name: "posts"
-    label: "Posts"
-    folder: "content/posts"
+  - name: "articles"
+    label: "Articles"
+    folder: "public/articles"    # markdown posts also saved here
     create: true
-    slug: "{{slug}}"
-    extension: "md"
-    format: "markdown"
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
     fields:
-      - {label: "Title", name: "title", widget: "string"}
-      - {label: "Date", name: "date", widget: "datetime"}
-      - {label: "Excerpt", name: "excerpt", widget: "text"}
-      - {label: "Cover Image", name: "cover", widget: "image", required: false}
-      - {label: "Body", name: "body", widget: "markdown"}
-
-  - name: "md-upload"
-    label: "Upload Markdown file"
-    files:
-      - label: "Upload markdown as file"
-        name: "upload_md"
-        file: "content/posts/{{slug}}.md"
-        fields:
-          - {label: "Slug (filename)", name: "slug", widget: "string"}
-          - {label: "Body (raw markdown)", name: "body", widget: "markdown"}
+      - { label: "Title", name: "title", widget: "string", required: true }
+      - { label: "Publish Date", name: "publish_date", widget: "datetime" }
+      - { label: "Description", name: "description", widget: "text" }
+      - { label: "Featured Image", name: "featured_image", widget: "image", required: false }
+      - { label: "Author", name: "author", widget: "string" }
+      - { label: "Tags", name: "tags", widget: "list", default: ["article"] }
+      - { label: "Body", name: "body", widget: "markdown" }

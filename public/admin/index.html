@@ -2,15 +2,43 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Admin</title>
-    <meta name="robots" content="noindex" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Content Manager</title>
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   </head>
   <body>
-    <!-- Decap (Netlify CMS) UMD build -->
-    <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+    <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
     <script>
-      // Init CMS (the backend uses Git Gateway - Netlify Identity)
-      window.CMS.init();
+      if (window.netlifyIdentity) {
+        window.netlifyIdentity.on("init", user => {
+          if (!user) {
+            window.netlifyIdentity.on("login", () => {
+              document.location.href = "/admin/";
+            });
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
+        } catch (error) {
+          console.error('CMS initialization error:', error);
+        }
+      });
+    </script>
+  </body>
+</html>
+      });
+    </script>
+  </body>
+</html>
+          } catch (error) {
+            console.error('CMS initialization error:', error);
+          }
+        } else {
+          console.error('CMS not loaded');
+        }
+      });
     </script>
   </body>
 </html>

@@ -1,8 +1,14 @@
 [build]
+  # This runs your React build and also generates manifest if you have the script
   command = "npm run build"
-  publish = "dist"
+  publish = "build"
 
+# Optional: if you have Netlify Functions
+# [functions]
+#   directory = "netlify/functions"
+
+# Redirect all React routes to index.html
 [[redirects]]
-  from = "/admin/*"
-  to = "/admin/index.html"
+  from = "/*"
+  to = "/index.html"
   status = 200
