@@ -2,11 +2,6 @@
   command = "CI= npm install --legacy-peer-deps && npm run build"
   publish = "build"
 
-# Optional: if you have Netlify Functions
-# [functions]
-#   directory = "netlify/functions"
-
-# Redirect all React routes to index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"
