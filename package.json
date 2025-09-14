@@ -16,7 +16,7 @@
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4",
     "netlify-cms-app": "^2.15.57",
-    "netlify-cms-media-library-cloudinary": "^1.2.16"
+    "netlify-cms-media-library-cloudigit addnary": "^1.2.16"
   },
   "scripts": {
     "start": "node scripts/generateManifest.js && react-scripts start",
